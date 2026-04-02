@@ -44,6 +44,8 @@ renum_pedigree <- function(pedigree,
 
   if (!requireNamespace("data.table", quietly = TRUE))
     stop("Package 'data.table' is required. Install it with install.packages('data.table').")
+  if (!is.data.frame(pedigree) || ncol(pedigree) < 3)
+    stop("'pedigree' must be a data.frame-like object with at least 3 columns: animal, sire, dam.")
 
   ped <- data.table::as.data.table(pedigree)
   data.table::setnames(ped, 1:3, c("animal", "sire", "dam"))
@@ -58,6 +60,8 @@ renum_pedigree <- function(pedigree,
   ped[is.na(animal), animal := "0"]
   ped[is.na(sire),   sire   := "0"]
   ped[is.na(dam),    dam    := "0"]
+  if (anyDuplicated(ped$animal[ped$animal != "0"]))
+    stop("Duplicated animal IDs found in 'pedigree'. Each animal must appear only once.")
 
   ids      <- ped$animal
   all_ids  <- unique(c("0", ids, ped$sire, ped$dam))
