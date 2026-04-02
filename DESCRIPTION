@@ -1,0 +1,29 @@
+Package: connectedness
+Type: Package
+Title: Connectedness Metrics for Genetic Evaluation
+Version: 0.1.0
+Authors@R: person("Alan", "", email = "alan@example.com", role = c("aut", "cre"))
+Description: Computes connectedness metrics between management units (MUs)
+    in animal breeding data, including Coefficient of Determination (CD) and
+    Prediction Error Variance of Differences (PEVD), based on the contrast
+    approach via Mixed Model Equations (MME). Supports both pedigree-based
+    (A-inverse) and user-supplied relationship matrices (e.g. genomic G-inverse).
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends:
+    R (>= 4.1.0)
+Imports:
+    Matrix,
+    data.table,
+    Rcpp (>= 1.0.0)
+LinkingTo:
+    Rcpp,
+    RcppEigen
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr

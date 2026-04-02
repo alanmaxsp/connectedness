@@ -1,0 +1,152 @@
+---
+title: "Introduction to connectedness"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to connectedness}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Overview
+
+The **connectedness** package computes two complementary metrics of
+connectedness between management units (MUs) in animal breeding evaluations:
+
+- **CD**: Coefficient of Determination of the contrast between MU means.  
+  Ranges from 0 (no connectedness) to 1 (perfect connectedness).
+- **PEVD**: Prediction Error Variance of Differences between MU means.  
+  In the same units as the residual variance ($\sigma^2_e$). Lower is better.
+
+Both metrics are based on the contrast approach via Mixed Model Equations
+(Laloë, 1993; Laloë et al., 1996).
+
+## Typical workflow
+
+### 1. Prepare your data
+
+You need two objects:
+
+- `pedigree`: a data frame with three columns (animal, sire, dam).  
+  Should include all ancestors, even those without phenotypic records.  
+  Unknown parents should be coded as `"0"`.
+
+- `data`: a data frame with phenotypic records, including columns for  
+  animal ID, MU membership, and fixed effects.
+
+```{r eval=FALSE}
+library(connectedness)
+
+# Example pedigree (complete, including ancestors)
+pedigree <- data.frame(
+  animal = c("S1","S2","D1","D2","A","B","C","D"),
+  sire   = c("0","0","0","0","S1","S1","S2","S2"),
+  dam    = c("0","0","0","0","D1","D2","D1","D2")
+)
+
+# Example phenotypic data
+data <- data.frame(
+  animal     = c("A","B","C","D","A","C"),
+  MU         = c("North","North","South","South","North","South"),
+  birth_year = c(2010,2010,2011,2011,2012,2012),
+  sex        = c("M","F","M","F","M","F"),
+  weight     = c(320,310,340,330,325,335)
+)
+```
+
+### 2. Run the analysis
+
+```{r eval=FALSE}
+res <- compute_connectedness(
+  data          = data,
+  pedigree      = pedigree,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100
+)
+```
+
+The variance components (`sigma2a`, `sigma2e`) should come from a prior
+REML or Bayesian variance components analysis of your data.
+
+### 3. Inspect results
+
+```{r eval=FALSE}
+print(res)
+#> Connectedness analysis
+#> ...
+#> Coefficient of Determination (CD):
+#>        North  South
+#> North     NA  0.412
+#> South  0.412     NA
+#>
+#> PEV of Differences (PEVD):
+#>        North  South
+#> North     NA 58.231
+#> South 58.231     NA
+
+plot(res, which = "CD")
+```
+
+### 4. Using a temporal window
+
+If your data spans many years, you may want to restrict the analysis to
+animals with records in a common period:
+
+```{r eval=FALSE}
+res_window <- compute_connectedness(
+  data                 = data,
+  pedigree             = pedigree,
+  animal_col           = "animal",
+  mu_col               = "MU",
+  fixed_formula        = ~ 1 + sex,
+  sigma2a              = 50,
+  sigma2e              = 100,
+  year_col             = "birth_year",
+  year_window          = c(2010, 2022),
+  min_records_per_year = 10
+)
+
+# visualize temporal overlap between MU pairs
+plot(res_window, which = "overlap")
+```
+
+### 5. Using a custom relationship matrix (genomic)
+
+If you have a pre-built inverse relationship matrix (e.g. G-inverse from
+genomic data), you can pass it directly:
+
+```{r eval=FALSE}
+# animal_index maps original IDs to row/column positions in rel_matrix
+animal_index <- setNames(1:4, c("A","B","C","D"))
+
+res_g <- compute_connectedness(
+  data          = data,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  rel_matrix    = my_Ginv,       # dgCMatrix, N x N
+  animal_index  = animal_index
+)
+```
+
+**Important**: when using `rel_matrix` directly, you are responsible for
+ensuring that (1) the matrix is the *inverse* of the relationship matrix,
+scaled consistently with `sigma2a`; (2) `data` contains only animals present
+in `animal_index`; and (3) the matrix is symmetric and positive definite.
+
+## References
+
+Laloë, D. (1993). Precision and information in linear models of genetic
+evaluation. *Genetics Selection Evolution*, 25, 557–576.
+
+Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures
+of precision and connectedness in mixed linear models of genetic evaluation.
+*Genetics Selection Evolution*, 28, 359–378.
