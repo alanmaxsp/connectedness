@@ -154,6 +154,10 @@ compute_connectedness <- function(
     stop("'sigma2a' must be a single positive number.")
   if (!is.numeric(sigma2e) || length(sigma2e) != 1 || sigma2e <= 0)
     stop("'sigma2e' must be a single positive number.")
+  if (!is.numeric(min_records_per_year) || length(min_records_per_year) != 1 ||
+      is.na(min_records_per_year) || min_records_per_year < 1 ||
+      min_records_per_year != as.integer(min_records_per_year))
+    stop("'min_records_per_year' must be a single positive integer.")
 
   # rel_matrix / pedigree exclusion logic
   if (is.null(rel_matrix) && is.null(pedigree))
@@ -171,6 +175,13 @@ compute_connectedness <- function(
       stop("'rel_matrix' must be square.")
     if (!is.integer(animal_index) || is.null(names(animal_index)))
       stop("'animal_index' must be a named integer vector.")
+    if (any(is.na(names(animal_index))) || any(names(animal_index) == ""))
+      stop("'animal_index' names must be non-missing, non-empty animal IDs.")
+    if (anyDuplicated(names(animal_index)))
+      stop("'animal_index' names (animal IDs) must be unique.")
+    if (any(is.na(animal_index)) || any(animal_index < 1L) ||
+        any(animal_index > nrow(rel_matrix)))
+      stop("'animal_index' values must be integers in 1..N, where N = nrow(rel_matrix).")
   }
 
   # year_window validation
@@ -232,6 +243,9 @@ compute_connectedness <- function(
     ))
 
   data$.new_id <- animal_index[ids_in_data]
+  if (any(is.na(data$.new_id)))
+    stop("Failed to map some records in 'data' to row indices in the relationship matrix. ",
+         "Check 'animal_index' names and values.")
 
   # ------------------------------------------------------------------
   # 5. Temporal filtering (optional)
