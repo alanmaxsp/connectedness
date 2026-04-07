@@ -34,6 +34,9 @@ The package currently reports two complementary metrics:
 Both metrics are computed under the **contrast approach** via Mixed Model
 Equations (MME) following Laloë (1993) and Laloë et al. (1996).
 
+If desired, `PEVD` can also be returned scaled by the additive genetic variance
+through `scale_pevd = TRUE` in `compute_connectedness()`.
+
 ## Installation
 
 ```r
@@ -64,6 +67,22 @@ res_A <- compute_connectedness(
 
 print(res_A)
 plot(res_A, which = "all")
+```
+
+If you want `PEVD / sigma2a` instead of `PEVD`, use:
+
+```r
+res_A_scaled <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "region",
+  fixed_formula = ~ 1 + sex + birth_year,
+  sigma2a       = 5.66,
+  sigma2e       = 10.24,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree,
+  scale_pevd    = TRUE
+)
 ```
 
 ### Genomic connectedness (G-inverse)

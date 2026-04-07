@@ -51,6 +51,9 @@ This is one of the reasons why the package can also exploit ideas such as
 **temporal overlap** between units when records are restricted to a common time
 window.
 
+If desired, `PEVD` can be returned scaled by the additive genetic variance by
+setting `scale_pevd = TRUE` in `compute_connectedness()`.
+
 ## Quick start
 
 For most users, the main entry point is `compute_connectedness()`.
@@ -121,6 +124,9 @@ The most important components are:
 - `n_target`: number of target animals per MU,
 - `relationship`: the inverse relationship matrix used,
 - `overlap`: temporal overlap table when a time window is used.
+
+If `scale_pevd = TRUE`, the `PEVD` matrix is returned on the scale
+`PEVD / sigma2a`.
 
 ## Example
 
@@ -208,6 +214,24 @@ The expected pattern is straightforward:
 This is the kind of first experience a new user needs: a small example where it
 is obvious that the package is responding to the pedigree structure rather than
 producing opaque numbers.
+
+### Optional PEVD scaling
+
+```{r eval=FALSE}
+res_strong_scaled <- compute_connectedness(
+  data          = data_strong,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  relationship  = "Ainv",
+  pedigree      = pedigree_strong,
+  scale_pevd    = TRUE
+)
+
+res_strong_scaled$PEVD
+```
 
 ## Choosing among Ainv, Ginv, Hinv, and custom
 
