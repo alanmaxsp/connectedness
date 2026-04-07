@@ -1,8 +1,8 @@
 #' Build the sparse inverse of the numerator relationship matrix (A-inverse)
 #'
-#' Constructs A-inverse directly from a renumbered pedigree using the
-#' Henderson rules, without ever forming A explicitly. Inbreeding coefficients
-#' are computed via the recursive algorithm of Aguilar & Misztal.
+#' Constructs \eqn{A^{-1}} directly from a renumbered pedigree using the
+#' Henderson rules, without ever forming \eqn{A} explicitly. Individual
+#' inbreeding coefficients are computed internally via an ML92-style traversal.
 #'
 #' @param renum A data frame as returned by [renum_pedigree()], with columns
 #'   `new_id`, `new_sire`, and `new_dam` (integer, 0 = unknown).
@@ -11,16 +11,16 @@
 #' \describe{
 #'   \item{Ainv}{A sparse matrix of class `dgCMatrix` (N x N), the inverse of
 #'     the numerator relationship matrix.}
-#'   \item{F}{Numeric vector of length N with individual inbreeding coefficients
-#'     (0 = non-inbred).}
+#'   \item{F}{Numeric vector of length N with individual inbreeding coefficients.}
 #' }
 #'
 #' @details
 #' The pedigree must be in topological order (parents before offspring), as
-#' produced by [renum_pedigree()]. The function calls compiled C++ code via
-#' Rcpp and RcppEigen for efficiency with large pedigrees.
+#' produced by [renum_pedigree()]. The heavy computations are delegated to
+#' compiled C++ code for efficiency with large pedigrees.
 #'
-#' @seealso [renum_pedigree()], [compute_connectedness()]
+#' @seealso [renum_pedigree()], [build_Ginv()], [build_Hinv()],
+#'   [compute_connectedness()]
 #'
 #' @examples
 #' ped <- data.frame(
@@ -36,17 +36,19 @@
 build_Ainv <- function(renum) {
 
   required_cols <- c("new_id", "new_sire", "new_dam")
-  if (!all(required_cols %in% names(renum)))
+  if (!all(required_cols %in% names(renum))) {
     stop("'renum' must have columns: new_id, new_sire, new_dam. ",
          "Use renum_pedigree() to generate it.")
+  }
 
   renum <- renum[order(renum$new_id), ]
 
   sire_vec <- as.integer(renum$new_sire)
   dam_vec  <- as.integer(renum$new_dam)
 
-  if (any(is.na(sire_vec)) || any(is.na(dam_vec)))
+  if (any(is.na(sire_vec)) || any(is.na(dam_vec))) {
     stop("NA values found in new_sire or new_dam. Check pedigree renumbering.")
+  }
 
-  build_Ainv_sparse_RA(sire = sire_vec, dam = dam_vec, cache_parent_pairs = TRUE)
+  build_Ainv_sparse_RA(sire = sire_vec, dam = dam_vec)
 }
