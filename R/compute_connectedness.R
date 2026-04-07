@@ -75,7 +75,7 @@
 #'   \item{relationship}{Character string indicating the inverse relationship
 #'     matrix used in the analysis.}
 #'   \item{year_window}{The time window used, or `NULL` if no filtering was applied.}
-#'   \item{overlap}{A `data.table` describing temporal overlap between MU pairs,
+#'   \item{overlap}{A data frame describing temporal overlap between MU pairs,
 #'     or `NULL` if no temporal filtering was requested.}
 #'   \item{call}{The matched function call.}
 #' }
@@ -440,24 +440,46 @@ compute_connectedness <- function(
 
 .compute_overlap <- function(data_window, mu_col, year_col, min_records_per_year) {
 
-  dt <- data.table::as.data.table(data_window)
-  data.table::setnames(dt, c(mu_col, year_col), c(".mu", ".year"))
+  df <- as.data.frame(data_window, stringsAsFactors = FALSE)
+  df[[mu_col]]   <- as.character(df[[mu_col]])
+  df[[year_col]] <- as.integer(df[[year_col]])
 
-  tab <- dt[, .N, by = .(.mu, .year)][N >= min_records_per_year]
+  counts <- stats::aggregate(
+    rep(1L, nrow(df)),
+    by = list(MU = df[[mu_col]], Year = df[[year_col]]),
+    FUN = length
+  )
+  names(counts)[3] <- "N"
 
-  yrs <- tab[, .(Years = list(sort(unique(.year)))), by = .mu]
-  mus <- sort(unique(yrs$.mu))
+  counts <- counts[counts$N >= min_records_per_year, c("MU", "Year"), drop = FALSE]
+  if (!nrow(counts)) {
+    return(data.frame(MU1 = character(0), MU2 = character(0), Year = integer(0)))
+  }
 
-  pairs <- data.table::CJ(MU1 = mus, MU2 = mus)
-  pairs[, W := Map(
-    intersect,
-    yrs[match(MU1, .mu), Years],
-    yrs[match(MU2, .mu), Years]
-  )]
-  pairs[, nW := lengths(W)]
+  years_by_mu <- split(counts$Year, counts$MU)
+  mus <- sort(names(years_by_mu))
 
-  overlap <- pairs[MU1 < MU2 & nW > 0,
-                   .(Year = as.integer(unlist(W))),
-                   by = .(MU1, MU2)]
-  overlap
+  out_list <- list()
+  idx <- 1L
+
+  for (i in seq_len(length(mus) - 1L)) {
+    for (j in seq.int(i + 1L, length(mus))) {
+      yy <- intersect(sort(unique(years_by_mu[[mus[i]]])), sort(unique(years_by_mu[[mus[j]]])))
+      if (length(yy)) {
+        out_list[[idx]] <- data.frame(
+          MU1 = mus[i],
+          MU2 = mus[j],
+          Year = as.integer(yy),
+          stringsAsFactors = FALSE
+        )
+        idx <- idx + 1L
+      }
+    }
+  }
+
+  if (!length(out_list)) {
+    return(data.frame(MU1 = character(0), MU2 = character(0), Year = integer(0)))
+  }
+
+  do.call(rbind, out_list)
 }
