@@ -54,6 +54,8 @@
 #'   `H^{-1}`.
 #' @param omega Scaling factor multiplying `A22^{-1}` in the construction of
 #'   `H^{-1}`.
+#' @param scale_pevd Logical. If `TRUE`, the returned `PEVD` matrix is divided
+#'   by `sigma2a` before being stored in the output object.
 #' @param year_col Optional character string naming the year column in `data`.
 #'   Required when `year_window` is specified.
 #' @param year_window Optional numeric vector of length 2 specifying the time
@@ -67,7 +69,8 @@
 #' @return An object of class `"connectedness"`, which is a list with:
 #' \describe{
 #'   \item{CD}{Numeric matrix (U x U). Pairwise CD contrast values between MUs.}
-#'   \item{PEVD}{Numeric matrix (U x U). Pairwise PEVD contrast values between MUs.}
+#'   \item{PEVD}{Numeric matrix (U x U). Pairwise PEVD contrast values between MUs.
+#'     If `scale_pevd = TRUE`, this matrix is returned on the scale `PEVD / sigma2a`.}
 #'   \item{qK}{Numeric matrix (U x U). Denominator of the contrast under the
 #'     kernel used in the analysis.}
 #'   \item{qC}{Numeric matrix (U x U). Prediction error numerator of the contrast.}
@@ -162,6 +165,7 @@ compute_connectedness <- function(
     tunedG               = 0L,
     tau                  = 1.0,
     omega                = 1.0,
+    scale_pevd           = FALSE,
     year_col             = NULL,
     year_window          = NULL,
     min_records_per_year = 10,
@@ -188,6 +192,9 @@ compute_connectedness <- function(
   }
   if (!is.numeric(sigma2e) || length(sigma2e) != 1L || is.na(sigma2e) || sigma2e <= 0) {
     stop("'sigma2e' must be a single positive number.")
+  }
+  if (!is.logical(scale_pevd) || length(scale_pevd) != 1L || is.na(scale_pevd)) {
+    stop("'scale_pevd' must be TRUE or FALSE.")
   }
   if (!is.numeric(min_records_per_year) || length(min_records_per_year) != 1L ||
       is.na(min_records_per_year) || min_records_per_year < 1 ||
@@ -419,10 +426,15 @@ compute_connectedness <- function(
     mu_names_nullable = as.character(mu_levels)
   )
 
+  pevd_out <- res_cpp$PEVD
+  if (scale_pevd) {
+    pevd_out <- pevd_out / sigma2a
+  }
+
   out <- structure(
     list(
       CD           = res_cpp$CD,
-      PEVD         = res_cpp$PEVD,
+      PEVD         = pevd_out,
       qK           = res_cpp$qK,
       qC           = res_cpp$qC,
       n_target     = res_cpp$n_target_by_MU,
