@@ -171,9 +171,6 @@ compute_connectedness <- function(
   cl <- match.call()
   relationship <- match.arg(relationship)
 
-  # ------------------------------------------------------------------
-  # 1. Input validation
-  # ------------------------------------------------------------------
   if (!is.data.frame(data)) {
     stop("'data' must be a data frame.")
   }
@@ -198,7 +195,6 @@ compute_connectedness <- function(
     stop("'min_records_per_year' must be a single positive integer.")
   }
 
-  # year_window validation
   if (!is.null(year_window)) {
     if (is.null(year_col)) {
       stop("'year_col' is required when 'year_window' is specified.")
@@ -214,9 +210,6 @@ compute_connectedness <- function(
     message("'min_records_per_year' is ignored when 'year_window' is NULL.")
   }
 
-  # ------------------------------------------------------------------
-  # 2. Check one animal - one MU
-  # ------------------------------------------------------------------
   data[[animal_col]] <- as.character(data[[animal_col]])
   data[[mu_col]]     <- as.character(data[[mu_col]])
 
@@ -230,9 +223,6 @@ compute_connectedness <- function(
     ))
   }
 
-  # ------------------------------------------------------------------
-  # 3. Build or validate the inverse relationship matrix
-  # ------------------------------------------------------------------
   renum <- NULL
 
   if (relationship %in% c("Ainv", "Hinv") ||
@@ -328,7 +318,6 @@ compute_connectedness <- function(
     }
   }
 
-  # Validate rel_matrix / animal_index
   if (!inherits(rel_matrix, "dgCMatrix")) {
     rel_matrix <- methods::as(rel_matrix, "dgCMatrix")
   }
@@ -339,8 +328,9 @@ compute_connectedness <- function(
   if (is.null(names(animal_index))) {
     stop("'animal_index' must be a named integer vector.")
   }
+  animal_names <- names(animal_index)
   animal_index <- as.integer(animal_index)
-  names(animal_index) <- names(animal_index)
+  names(animal_index) <- animal_names
   if (any(is.na(names(animal_index))) || any(names(animal_index) == "")) {
     stop("'animal_index' names must be non-missing, non-empty animal IDs.")
   }
@@ -353,9 +343,6 @@ compute_connectedness <- function(
 
   N <- nrow(rel_matrix)
 
-  # ------------------------------------------------------------------
-  # 4. Assign integer index to each record in data
-  # ------------------------------------------------------------------
   ids_in_data <- data[[animal_col]]
   missing_ids <- setdiff(ids_in_data, names(animal_index))
   if (length(missing_ids) > 0) {
@@ -371,9 +358,6 @@ compute_connectedness <- function(
     stop("Failed to map some records in 'data' to row indices in the relationship matrix. Check 'animal_index'.")
   }
 
-  # ------------------------------------------------------------------
-  # 5. Temporal filtering (optional)
-  # ------------------------------------------------------------------
   overlap_dt <- NULL
 
   if (!is.null(year_window)) {
@@ -393,9 +377,6 @@ compute_connectedness <- function(
     data_window <- data
   }
 
-  # ------------------------------------------------------------------
-  # 6. Build mu_animal and target vectors
-  # ------------------------------------------------------------------
   mu_levels <- sort(unique(data_window[[mu_col]]))
   U <- length(mu_levels)
   if (U < 2) {
@@ -417,17 +398,11 @@ compute_connectedness <- function(
     print(tab_target)
   }
 
-  # ------------------------------------------------------------------
-  # 7. Build sparse model matrix for fixed effects
-  # ------------------------------------------------------------------
   if (!requireNamespace("Matrix", quietly = TRUE)) {
     stop("Package 'Matrix' is required.")
   }
   Xsp <- Matrix::sparse.model.matrix(fixed_formula, data = data_window)
 
-  # ------------------------------------------------------------------
-  # 8. Call C++ core
-  # ------------------------------------------------------------------
   id_rec <- as.integer(data_window$.new_id)
 
   if (verbose) {
@@ -444,9 +419,6 @@ compute_connectedness <- function(
     mu_names_nullable = as.character(mu_levels)
   )
 
-  # ------------------------------------------------------------------
-  # 9. Assemble output
-  # ------------------------------------------------------------------
   out <- structure(
     list(
       CD           = res_cpp$CD,
@@ -466,10 +438,6 @@ compute_connectedness <- function(
   out
 }
 
-
-# ----------------------------------------------------------------------
-# Internal helper: compute temporal overlap table
-# ----------------------------------------------------------------------
 .compute_overlap <- function(data_window, mu_col, year_col, min_records_per_year) {
 
   dt <- data.table::as.data.table(data_window)
