@@ -1,10 +1,10 @@
-#' Print method for connectedness objects
+#' Print a connectedness object
 #'
 #' @param x An object of class `"connectedness"`.
-#' @param digits Integer. Number of decimal places for reported summaries.
-#'   Default is 3.
-#' @param ... Further arguments (currently ignored).
+#' @param digits Number of digits used in printed summaries.
+#' @param ... Unused.
 #'
+#' @return The input object, invisibly.
 #' @export
 print.connectedness <- function(x, digits = 3, ...) {
 
@@ -60,23 +60,18 @@ print.connectedness <- function(x, digits = 3, ...) {
 }
 
 
-#' Plot method for connectedness objects
+#' Plot a connectedness object
 #'
-#' Produces heatmaps of the CD and PEVD matrices and, when available,
-#' a plot of temporal overlap between MU pairs. If `ggplot2` is installed,
-#' the heatmaps are drawn with a cleaner tile-based style. Otherwise, a base-R
-#' fallback is used.
+#' Draws heatmaps of `CD` or `PEVD`, and optionally a temporal overlap plot.
 #'
 #' @param x An object of class `"connectedness"`.
-#' @param which Character. Which plot to produce: `"CD"`, `"PEVD"`,
-#'   `"overlap"`, or `"all"`.
-#' @param show_values Logical. If `TRUE`, print numeric values inside cells.
-#'   Default is `TRUE`.
-#' @param digits Integer. Number of decimal places shown inside cells.
-#' @param triangle Character. Which triangle of the matrix to display:
-#'   `"full"`, `"upper"`, or `"lower"`.
-#' @param ... Further graphical arguments (currently ignored).
+#' @param which Which plot to produce: `"CD"`, `"PEVD"`, `"overlap"`, or `"all"`.
+#' @param show_values Logical; if `TRUE`, print values inside the heatmap cells.
+#' @param digits Number of decimal places shown inside cells.
+#' @param triangle Which part of the matrix to display: `"full"`, `"upper"`, or `"lower"`.
+#' @param ... Unused.
 #'
+#' @return The input object, invisibly.
 #' @export
 plot.connectedness <- function(x,
                                which = c("CD", "PEVD", "overlap", "all"),
