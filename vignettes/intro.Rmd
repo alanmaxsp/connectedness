@@ -51,16 +51,6 @@ This is one of the reasons why the package can also exploit ideas such as
 **temporal overlap** between units when records are restricted to a common time
 window.
 
-The two metrics should be interpreted jointly:
-
-- **PEVD contrast** focuses on the uncertainty of across-unit comparisons.
-- **CD contrast** rescales that uncertainty relative to the genetic denominator
-  of the contrast. Because of that, CD can react to reduced genetic variability
-  in the comparison set, which is often informative rather than incidental.
-
-Accordingly, the vignette does **not** treat PEVD as intrinsically superior to
-CD. In practice, they answer closely related but not identical questions.
-
 ## Quick start
 
 For most users, the main entry point is `compute_connectedness()`.
@@ -132,11 +122,7 @@ The most important components are:
 - `relationship`: the inverse relationship matrix used,
 - `overlap`: temporal overlap table when a time window is used.
 
-In other words, the output is not just a final score: it also tells the user
-**what was compared**, **under which relationship structure**, and **with how
-many target animals per unit**.
-
-## A first successful experience
+## Example
 
 A good introductory vignette should let the user see the package react to a
 simple and meaningful change in connectedness. The example below contrasts two
@@ -325,28 +311,6 @@ plot(res_strong, which = "all")
 
 A quick visual check is often the easiest way to identify MU pairs that are
 well connected, weakly connected, or effectively isolated.
-
-## Where to go next
-
-This vignette is intentionally introductory. Its job is to help the user answer
-five questions quickly:
-
-1. what problem the package solves,
-2. how it is used,
-3. what inputs it expects,
-4. what outputs it returns,
-5. and what a first successful analysis looks like.
-
-More specific topics are better handled in separate vignettes. The most natural
-next ones would be:
-
-- **Genomic and single-step workflows** (`Ginv` and `Hinv`),
-- **Interpreting CD and PEVD in practice**,
-- **Temporal connectedness analyses**.
-
-At this stage, I still think one strong introductory vignette is enough *for the
-moment*, but the package is already close to justifying a second, more advanced
-vignette centered on genomic and single-step use.
 
 ## References
 
