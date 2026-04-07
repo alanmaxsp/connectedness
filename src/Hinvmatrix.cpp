@@ -516,7 +516,6 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
     const int n_chunks = (m_valid + chunk_size - 1) / chunk_size;
     MatrixXd G = MatrixXd::Zero(n, n);
 
-    // Reusable buffer
     MatrixXd Zbuf(n, chunk_size);
 
     for (int chunk = 0; chunk < n_chunks; ++chunk) {
@@ -614,14 +613,14 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
  //'
  //' @export
  // [[Rcpp::export]]
- List compute_Ginv(const MatrixXi& X,
+ List compute_Ginv(const Eigen::MatrixXi& X,
                    double maf_threshold = 0.05,
                    int    missing_code  = 5,
                    double blend         = 0.05,
                    int    chunk_size    = 2000,
                    int    n_threads     = 1,
                    int    tunedG        = 0,
-                   Nullable<NumericMatrix> A22 = R_NilValue) {
+                   Rcpp::Nullable<Rcpp::NumericMatrix> A22 = R_NilValue) {
 
    MatrixXd A22mat;
    MatrixXd* A22ptr = nullptr;
@@ -663,11 +662,11 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
  //'
  //' @export
  // [[Rcpp::export]]
- SparseMatrix<double> compute_Hinv(
-     const SparseMatrix<double>& Ainv,
-     const MatrixXd&             Ginv,
-     const MatrixXd&             A22,
-     const IntegerVector&        genotyped_idx,
+ Eigen::SparseMatrix<double> compute_Hinv(
+     const Eigen::SparseMatrix<double>& Ainv,
+     const Eigen::MatrixXd&             Ginv,
+     const Eigen::MatrixXd&             A22,
+     const Rcpp::IntegerVector&         genotyped_idx,
      double tau   = 1.0,
      double omega = 1.0) {
 
@@ -786,10 +785,10 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
  //' @return List containing Hinv and selected optional objects.
  //' @export
  // [[Rcpp::export]]
- List compute_Hinv_from_X(const IntegerVector& sire,
-                          const IntegerVector& dam,
-                          const IntegerVector& genotyped_idx,
-                          const MatrixXi&      X,
+ List compute_Hinv_from_X(const Rcpp::IntegerVector& sire,
+                          const Rcpp::IntegerVector& dam,
+                          const Rcpp::IntegerVector& genotyped_idx,
+                          const Eigen::MatrixXi&    X,
                           double maf_threshold      = 0.05,
                           int    missing_code       = 5,
                           double blend              = 0.05,
