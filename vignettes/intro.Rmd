@@ -11,142 +11,281 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-## Overview
+## Why connectedness matters
 
-The **connectedness** package computes two complementary metrics of
-connectedness between management units (MUs) in animal breeding evaluations:
+When animals are compared across herds, flocks, regions, or other management
+units (MUs), the reliability of those comparisons depends on the degree of
+*genetic connectedness* among units. Under an animal model, connectedness is
+not only a consequence of shared sires: it arises through the full relationship
+structure among animals.
 
-- **CD**: Coefficient of Determination of the contrast between MU means.  
-  Ranges from 0 (no connectedness) to 1 (perfect connectedness).
-- **PEVD**: Prediction Error Variance of Differences between MU means.  
-  In the same units as the residual variance ($\sigma^2_e$). Lower is better.
+A central practical implication is that comparisons between animals raised in
+different MUs become less reliable when the units are weakly connected. In the
+animal-model setting, Kennedy and Trus (1993) argued that the most meaningful
+measure of connectedness is the prediction error variance of differences in EBV
+between animals from different MUs, because it directly quantifies the error of
+the comparison that matters for selection. They also showed that genetic links
+*across* MUs reduce prediction error, whereas strong relationships concentrated
+*within* MUs can actually worsen across-unit comparisons by increasing drift and
+the uncertainty of MU contrasts. Kennedy and Trus (1993) also evaluated simpler
+surrogate measures and found that quantities tied to the variance of estimated
+MU differences were much more informative than crude gene-flow summaries. fileciteturn55file0
 
-Both metrics are based on the contrast approach via Mixed Model Equations
-(Laloë, 1993; Laloë et al., 1996).
+The **connectedness** package implements this logic through two complementary
+metrics computed from mixed model equations:
 
-## Typical workflow
+- **CD**: Coefficient of Determination of the contrast between MU means.
+  Higher values indicate stronger connectedness.
+- **PEVD**: Prediction Error Variance of Differences.
+  Lower values indicate stronger connectedness.
 
-### 1. Prepare your data
+The package can now compute connectedness from:
 
-You need two objects:
+- a pedigree-based inverse relationship matrix (**A-inverse**),
+- a genomic inverse relationship matrix (**G-inverse**),
+- a single-step inverse relationship matrix (**H-inverse**), or
+- a user-supplied inverse kernel.
 
-- `pedigree`: a data frame with three columns (animal, sire, dam).  
-  Should include all ancestors, even those without phenotypic records.  
-  Unknown parents should be coded as `"0"`.
+## What this package does
 
-- `data`: a data frame with phenotypic records, including columns for  
-  animal ID, MU membership, and fixed effects.
+The core workflow has two steps:
+
+1. build or provide an inverse relationship matrix,
+2. compute CD and PEVD between all pairs of management units.
+
+In most use cases, you will call `compute_connectedness()` directly and choose
+which relationship structure should underlie the analysis.
+
+## Minimal data objects
+
+You typically need at least:
+
+- `data`: phenotypic records including animal ID, management unit, and any
+  fixed effects required in the model matrix,
+- `pedigree`: a three-column pedigree (animal, sire, dam) when using pedigree
+  or single-step connectedness,
+- `X`: a genotype matrix when using genomic or single-step connectedness.
 
 ```{r eval=FALSE}
 library(connectedness)
 
-# Example pedigree (complete, including ancestors)
 pedigree <- data.frame(
-  animal = c("S1","S2","D1","D2","A","B","C","D"),
-  sire   = c("0","0","0","0","S1","S1","S2","S2"),
-  dam    = c("0","0","0","0","D1","D2","D1","D2")
+  animal = c("S1", "S2", "D1", "D2", "A", "B", "C", "D"),
+  sire   = c("0",  "0",  "0",  "0",  "S1", "S1", "S2", "S2"),
+  dam    = c("0",  "0",  "0",  "0",  "D1", "D2", "D1", "D2")
 )
 
-# Example phenotypic data
 data <- data.frame(
-  animal     = c("A","B","C","D","A","C"),
-  MU         = c("North","North","South","South","North","South"),
-  birth_year = c(2010,2010,2011,2011,2012,2012),
-  sex        = c("M","F","M","F","M","F"),
-  weight     = c(320,310,340,330,325,335)
+  animal     = c("A", "B", "C", "D"),
+  MU         = c("North", "North", "South", "South"),
+  birth_year = c(2020, 2020, 2020, 2020),
+  sex        = c("M", "F", "M", "F"),
+  weight     = c(320, 310, 340, 330)
 )
 ```
 
-### 2. Run the analysis
+## Typical workflow with A-inverse
+
+This is the default pedigree-based analysis. The package renumbers the pedigree,
+builds `Ainv`, and computes connectedness from the mixed model equations.
 
 ```{r eval=FALSE}
-res <- compute_connectedness(
-  data          = data,
-  pedigree      = pedigree,
-  animal_col    = "animal",
-  mu_col        = "MU",
-  fixed_formula = ~ 1 + sex,
-  sigma2a       = 50,
-  sigma2e       = 100
-)
-```
-
-The variance components (`sigma2a`, `sigma2e`) should come from a prior
-REML or Bayesian variance components analysis of your data.
-
-### 3. Inspect results
-
-```{r eval=FALSE}
-print(res)
-#> Connectedness analysis
-#> ...
-#> Coefficient of Determination (CD):
-#>        North  South
-#> North     NA  0.412
-#> South  0.412     NA
-#>
-#> PEV of Differences (PEVD):
-#>        North  South
-#> North     NA 58.231
-#> South 58.231     NA
-
-plot(res, which = "CD")
-```
-
-### 4. Using a temporal window
-
-If your data spans many years, you may want to restrict the analysis to
-animals with records in a common period:
-
-```{r eval=FALSE}
-res_window <- compute_connectedness(
-  data                 = data,
-  pedigree             = pedigree,
-  animal_col           = "animal",
-  mu_col               = "MU",
-  fixed_formula        = ~ 1 + sex,
-  sigma2a              = 50,
-  sigma2e              = 100,
-  year_col             = "birth_year",
-  year_window          = c(2010, 2022),
-  min_records_per_year = 10
-)
-
-# visualize temporal overlap between MU pairs
-plot(res_window, which = "overlap")
-```
-
-### 5. Using a custom relationship matrix (genomic)
-
-If you have a pre-built inverse relationship matrix (e.g. G-inverse from
-genomic data), you can pass it directly:
-
-```{r eval=FALSE}
-# animal_index maps original IDs to row/column positions in rel_matrix
-animal_index <- setNames(1:4, c("A","B","C","D"))
-
-res_g <- compute_connectedness(
+res_A <- compute_connectedness(
   data          = data,
   animal_col    = "animal",
   mu_col        = "MU",
   fixed_formula = ~ 1 + sex,
   sigma2a       = 50,
   sigma2e       = 100,
-  rel_matrix    = my_Ginv,       # dgCMatrix, N x N
+  relationship  = "Ainv",
+  pedigree      = pedigree
+)
+
+print(res_A)
+plot(res_A, which = "CD")
+plot(res_A, which = "PEVD")
+```
+
+## Using G-inverse
+
+When a genomic relationship structure is preferred, provide a genotype matrix
+`X` coded as 0/1/2. In this case connectedness is computed from `Ginv`.
+
+```{r eval=FALSE}
+# toy genotype matrix: rows must correspond to the genotyped animals
+X <- matrix(
+  c(0, 1, 2, 1,
+    1, 1, 2, 0,
+    2, 1, 0, 1,
+    1, 2, 1, 0),
+  nrow = 4,
+  byrow = TRUE
+)
+rownames(X) <- c("A", "B", "C", "D")
+
+animal_index <- setNames(seq_len(nrow(X)), rownames(X))
+
+res_G <- compute_connectedness(
+  data          = data,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  relationship  = "Ginv",
+  X             = X,
   animal_index  = animal_index
 )
 ```
 
-**Important**: when using `rel_matrix` directly, you are responsible for
-ensuring that (1) the matrix is the *inverse* of the relationship matrix,
-scaled consistently with `sigma2a`; (2) `data` contains only animals present
-in `animal_index`; and (3) the matrix is symmetric and positive definite.
+This is appropriate when you want connectedness to reflect realized genomic
+relationships among the genotyped animals rather than pedigree expectation.
+
+## Using H-inverse
+
+Single-step connectedness combines pedigree and genomic information. Here the
+rows of `X` must correspond to the pedigree indices given by `genotyped_idx`.
+
+```{r eval=FALSE}
+renum <- renum_pedigree(pedigree, verbose = FALSE)
+
+genotyped_idx <- renum$new_id[match(c("A", "B", "C", "D"), renum$animal)]
+
+res_H <- compute_connectedness(
+  data          = data,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  relationship  = "Hinv",
+  pedigree      = pedigree,
+  X             = X,
+  genotyped_idx = genotyped_idx
+)
+```
+
+This option is useful when some animals are genotyped and you want connectedness
+to reflect the same single-step structure used in genomic evaluation.
+
+## Using a custom inverse kernel
+
+Advanced users can supply their own inverse kernel directly.
+
+```{r eval=FALSE}
+res_custom <- compute_connectedness(
+  data          = data,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  relationship  = "custom",
+  rel_matrix    = my_Kinv,
+  animal_index  = my_index
+)
+```
+
+This is the most flexible route when the relationship structure is built
+outside the package.
+
+## Temporal restrictions
+
+In many data sets, MUs are not connected uniformly through time. The package can
+restrict the analysis to a given time window and report the years in which MU
+pairs overlap.
+
+```{r eval=FALSE}
+res_window <- compute_connectedness(
+  data                 = data,
+  animal_col           = "animal",
+  mu_col               = "MU",
+  fixed_formula        = ~ 1 + sex,
+  sigma2a              = 50,
+  sigma2e              = 100,
+  relationship         = "Ainv",
+  pedigree             = pedigree,
+  year_col             = "birth_year",
+  year_window          = c(2018, 2022),
+  min_records_per_year = 5
+)
+
+plot(res_window, which = "overlap")
+```
+
+## Interpreting CD and PEVD
+
+CD and PEVD should be interpreted jointly:
+
+- **higher CD** means more precise contrasts between MUs,
+- **lower PEVD** means less uncertainty in EBV differences across MUs.
+
+For many practical applications, PEVD is the most directly interpretable metric
+because it quantifies the prediction error of the comparison itself. This is
+precisely why Kennedy and Trus (1993) emphasized prediction error of differences
+as the most relevant connectedness criterion under an animal model. fileciteturn55file0
+
+The package therefore exposes both views: `CD` as a scaled connectedness metric,
+and `PEVD` as the underlying error scale.
+
+## Visualization
+
+The `plot()` method can display heatmaps for CD and PEVD and, when available,
+a temporal overlap plot.
+
+```{r eval=FALSE}
+plot(res_A, which = "CD")
+plot(res_A, which = "PEVD")
+plot(res_A, which = "all")
+
+# optional controls
+plot(res_A, which = "CD", show_values = TRUE, triangle = "upper")
+```
+
+## Building inverse matrices explicitly
+
+Although `compute_connectedness()` is the main entry point, the package also
+provides wrappers to build inverse relationship matrices directly.
+
+```{r eval=FALSE}
+renum <- renum_pedigree(pedigree, verbose = FALSE)
+Ainv_res <- build_Ainv(renum)
+Ginv_res <- build_Ginv(X)
+Hinv_res <- build_Hinv(renum, genotyped_idx = genotyped_idx, X = X)
+```
+
+These functions are useful when you want to inspect intermediate matrices or
+reuse them across analyses.
+
+## Suggested vignette strategy
+
+At the current stage of the package, a **single strong introductory vignette**
+is sufficient, provided that it clearly explains:
+
+- why connectedness matters,
+- how to choose among `Ainv`, `Ginv`, `Hinv`, and `custom`,
+- how to interpret CD and PEVD,
+- and how to visualize the results.
+
+That said, once the package stabilizes, a second vignette would likely add real
+value. A good split would be:
+
+1. **Introductory vignette**: concepts, main workflow, interpretation.
+2. **Advanced vignette**: genomic and single-step workflows, tuning of `G`,
+   temporal analyses, and larger-scale use cases.
+
+My view is that right now **one vignette is enough**, but only if it is much
+more purposeful than the current version.
 
 ## References
+
+Kennedy, B. W., & Trus, D. (1993). Considerations on genetic connectedness
+between management units under an animal model. *Journal of Animal Science*,
+71, 2341–2352. fileciteturn55file0
 
 Laloë, D. (1993). Precision and information in linear models of genetic
 evaluation. *Genetics Selection Evolution*, 25, 557–576.
 
-Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures
-of precision and connectedness in mixed linear models of genetic evaluation.
+Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures of
+precision and connectedness in mixed linear models of genetic evaluation.
 *Genetics Selection Evolution*, 28, 359–378.
