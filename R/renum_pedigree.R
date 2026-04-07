@@ -42,26 +42,29 @@ renum_pedigree <- function(pedigree,
                            unknown_parent = c("0", "00000000000000"),
                            verbose = TRUE) {
 
-  if (!requireNamespace("data.table", quietly = TRUE))
-    stop("Package 'data.table' is required. Install it with install.packages('data.table').")
-  if (!is.data.frame(pedigree) || ncol(pedigree) < 3)
+  if (!is.data.frame(pedigree) || ncol(pedigree) < 3) {
     stop("'pedigree' must be a data.frame-like object with at least 3 columns: animal, sire, dam.")
-
-  ped <- data.table::as.data.table(pedigree)
-  data.table::setnames(ped, 1:3, c("animal", "sire", "dam"))
-  ped[, c("animal", "sire", "dam") := lapply(.SD, as.character), .SDcols = 1:3]
-
-  # Recode unknown parents
-  for (code in unknown_parent) {
-    ped[animal == code, animal := "0"]
-    ped[sire   == code, sire   := "0"]
-    ped[dam    == code, dam    := "0"]
   }
-  ped[is.na(animal), animal := "0"]
-  ped[is.na(sire),   sire   := "0"]
-  ped[is.na(dam),    dam    := "0"]
-  if (anyDuplicated(ped$animal[ped$animal != "0"]))
+
+  ped <- as.data.frame(pedigree, stringsAsFactors = FALSE)
+  names(ped)[1:3] <- c("animal", "sire", "dam")
+  ped$animal <- as.character(ped$animal)
+  ped$sire   <- as.character(ped$sire)
+  ped$dam    <- as.character(ped$dam)
+
+  for (code in unknown_parent) {
+    ped$animal[ped$animal == code] <- "0"
+    ped$sire[ped$sire == code]     <- "0"
+    ped$dam[ped$dam == code]       <- "0"
+  }
+
+  ped$animal[is.na(ped$animal)] <- "0"
+  ped$sire[is.na(ped$sire)]     <- "0"
+  ped$dam[is.na(ped$dam)]       <- "0"
+
+  if (anyDuplicated(ped$animal[ped$animal != "0"])) {
     stop("Duplicated animal IDs found in 'pedigree'. Each animal must appear only once.")
+  }
 
   ids      <- ped$animal
   all_ids  <- unique(c("0", ids, ped$sire, ped$dam))
@@ -92,8 +95,9 @@ renum_pedigree <- function(pedigree,
     included_row[idx]      <- TRUE
     included[animals_iter] <- TRUE
 
-    if (verbose)
+    if (verbose) {
       message(sprintf("  Iteration %4d: %6d animals included (total: %8d)", iter, k, cur))
+    }
   }
 
   if (any(!included_row)) {
@@ -103,8 +107,10 @@ renum_pedigree <- function(pedigree,
     ))
   }
 
-  sire_code <- new_id[ped$sire]; sire_code[is.na(sire_code)] <- 0L
-  dam_code  <- new_id[ped$dam];  dam_code[is.na(dam_code)]   <- 0L
+  sire_code <- new_id[ped$sire]
+  sire_code[is.na(sire_code)] <- 0L
+  dam_code  <- new_id[ped$dam]
+  dam_code[is.na(dam_code)] <- 0L
 
   res <- data.frame(
     new_id   = new_id[ped$animal],
@@ -115,5 +121,6 @@ renum_pedigree <- function(pedigree,
     dam      = ped$dam,
     stringsAsFactors = FALSE
   )
+
   res[order(res$new_id), ]
 }
