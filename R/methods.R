@@ -181,15 +181,30 @@ plot.connectedness <- function(x,
   }
 
   .plot_overlap_base <- function(dt) {
-    pairs <- unique(paste(dt$MU1, dt$MU2, sep = "\u2013"))
-    pairs <- pairs[order(pairs)]
-    y_pos <- match(paste(dt$MU1, dt$MU2, sep = "\u2013"), pairs)
+    dt <- as.data.frame(dt, stringsAsFactors = FALSE)
+    if (!all(c("MU1", "MU2", "Year") %in% names(dt))) {
+      stop("'overlap' must contain columns MU1, MU2, and Year.")
+    }
+    if (!nrow(dt)) {
+      message("No temporal overlap to plot.")
+      return(invisible(NULL))
+    }
+
+    dt$MU1 <- as.character(dt$MU1)
+    dt$MU2 <- as.character(dt$MU2)
+    dt$Year <- as.integer(dt$Year)
+
+    pair <- paste(dt$MU1, dt$MU2, sep = "\u2013")
+    pairs <- sort(unique(pair))
+    y_pos <- as.numeric(match(pair, pairs))
+    years <- as.numeric(dt$Year)
 
     old_par <- graphics::par(no.readonly = TRUE)
     on.exit(graphics::par(old_par), add = TRUE)
     graphics::par(mar = c(5, 10, 4, 2))
     graphics::plot(
-      dt$Year, y_pos,
+      x = years,
+      y = y_pos,
       pch = 19,
       cex = 0.9,
       yaxt = "n",
@@ -270,21 +285,26 @@ plot.connectedness <- function(x,
     }
 
     if (do_overlap) {
-      dt <- x$overlap
-      dt$pair <- paste(dt$MU1, dt$MU2, sep = "\u2013")
-      p_overlap <- ggplot2::ggplot(dt, ggplot2::aes(x = Year, y = stats::reorder(pair, Year))) +
-        ggplot2::geom_point(size = 2.4, alpha = 0.9) +
-        ggplot2::labs(
-          title = "Temporal overlap between MU pairs",
-          x = "Year",
-          y = NULL
-        ) +
-        ggplot2::theme_minimal(base_size = 12) +
-        ggplot2::theme(
-          panel.grid.minor = ggplot2::element_blank(),
-          plot.title = ggplot2::element_text(face = "bold")
-        )
-      plot_list[[length(plot_list) + 1L]] <- p_overlap
+      dt <- as.data.frame(x$overlap, stringsAsFactors = FALSE)
+      if (nrow(dt)) {
+        dt$MU1 <- as.character(dt$MU1)
+        dt$MU2 <- as.character(dt$MU2)
+        dt$Year <- as.integer(dt$Year)
+        dt$pair <- paste(dt$MU1, dt$MU2, sep = "\u2013")
+        p_overlap <- ggplot2::ggplot(dt, ggplot2::aes(x = Year, y = stats::reorder(pair, Year))) +
+          ggplot2::geom_point(size = 2.4, alpha = 0.9) +
+          ggplot2::labs(
+            title = "Temporal overlap between MU pairs",
+            x = "Year",
+            y = NULL
+          ) +
+          ggplot2::theme_minimal(base_size = 12) +
+          ggplot2::theme(
+            panel.grid.minor = ggplot2::element_blank(),
+            plot.title = ggplot2::element_text(face = "bold")
+          )
+        plot_list[[length(plot_list) + 1L]] <- p_overlap
+      }
     }
 
     if (length(plot_list) == 1L) {
