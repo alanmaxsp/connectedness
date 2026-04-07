@@ -1,91 +1,144 @@
 #' Compute connectedness metrics between management units
 #'
-#' Calculates the Coefficient of Determination (CD) and the Prediction Error
-#' Variance of Differences (PEVD) between all pairs of management units (MUs)
-#' using the contrast approach via Mixed Model Equations (MME).
+#' Computes connectedness between management units (MUs) under the contrast
+#' approach via Mixed Model Equations (MME). The function returns two
+#' complementary metrics for all MU pairs: the Coefficient of Determination
+#' (`CD`) and the Prediction Error Variance of Differences (`PEVD`).
 #'
-#' The user can choose whether connectedness is computed from a pedigree-based
-#' inverse relationship matrix (A-inverse), a genomic inverse relationship
-#' matrix (G-inverse), a single-step inverse relationship matrix (H-inverse),
-#' or a custom inverse kernel supplied directly.
+#' The connectedness analysis can be based on a pedigree-derived inverse
+#' relationship matrix (`Ainv`), a genomic inverse relationship matrix (`Ginv`),
+#' a single-step inverse relationship matrix (`Hinv`), or a user-supplied
+#' inverse kernel.
 #'
-#' @param data A data frame containing phenotypic records. Must include columns
-#'   for animal ID, MU membership, and all variables in `fixed_formula`.
-#' @param animal_col Character. Name of the column in `data` with animal IDs.
-#' @param mu_col Character. Name of the column in `data` with MU labels.
-#'   Each animal must belong to exactly one MU.
-#' @param fixed_formula A one-sided formula for the fixed effects of the MME,
-#'   e.g. `~ 1 + sex + birth_year`. The intercept is included by default.
-#' @param sigma2a Positive numeric. Additive genetic variance (or, more
-#'   generally, the variance associated with the animal effect).
-#' @param sigma2e Positive numeric. Residual variance.
+#' @param data A data frame containing the records used to define the analysis.
+#'   It must include the animal identifier, the management-unit assignment, and
+#'   all variables referenced in `fixed_formula`.
+#' @param animal_col Character string giving the name of the animal ID column in
+#'   `data`.
+#' @param mu_col Character string giving the name of the management-unit column
+#'   in `data`. Each animal must belong to exactly one MU.
+#' @param fixed_formula A one-sided model formula describing the fixed-effects
+#'   design matrix, for example `~ 1 + sex + birth_year`.
+#' @param sigma2a Positive numeric scalar giving the additive genetic variance
+#'   (or, more generally, the variance associated with the animal effect under
+#'   the chosen kernel).
+#' @param sigma2e Positive numeric scalar giving the residual variance.
 #' @param relationship Character string indicating which inverse relationship
-#'   matrix to use. One of `"Ainv"`, `"Ginv"`, `"Hinv"`, or `"custom"`.
-#' @param pedigree Optional pedigree data frame with exactly three columns
-#'   (animal, sire, dam). Required for `relationship = "Ainv"` and `"Hinv"`.
-#'   Also useful for `relationship = "Ginv"` if `animal_index` must be derived
-#'   from `genotyped_idx`.
-#' @param X Optional genotype matrix (`n_gen x m`, coded 0/1/2). Required for
-#'   `relationship = "Ginv"` and `"Hinv"`.
+#'   matrix should underlie the connectedness analysis. Must be one of
+#'   `"Ainv"`, `"Ginv"`, `"Hinv"`, or `"custom"`.
+#' @param pedigree Optional pedigree data frame with three columns representing
+#'   animal, sire, and dam. Required for `relationship = "Ainv"` and
+#'   `relationship = "Hinv"`. It can also be used with `relationship = "Ginv"`
+#'   when `animal_index` is derived from `genotyped_idx`.
+#' @param X Optional genotype matrix (`n_gen x m`) coded as 0/1/2. Required for
+#'   `relationship = "Ginv"` and `relationship = "Hinv"`.
 #' @param genotyped_idx Optional integer vector of 1-based renumbered pedigree
 #'   indices for the genotyped animals, in the same order as the rows of `X`.
 #'   Required for `relationship = "Hinv"`, and also for `relationship = "Ginv"`
-#'   when `animal_index` is not supplied explicitly.
+#'   when `animal_index` is not supplied directly.
 #' @param animal_index Optional named integer vector mapping original animal IDs
-#'   to row/column indices in the inverse relationship matrix actually used for
-#'   connectedness. Required for `relationship = "custom"`; optional otherwise
-#'   when it can be derived internally.
-#' @param rel_matrix Optional user-supplied inverse relationship matrix
-#'   (`dgCMatrix`). Used only when `relationship = "custom"`.
+#'   to row/column indices in the inverse relationship matrix actually used in
+#'   the analysis. Required for `relationship = "custom"`; optional otherwise if
+#'   it can be derived internally.
+#' @param rel_matrix Optional user-supplied inverse relationship matrix of class
+#'   `dgCMatrix`. Used only when `relationship = "custom"`.
 #' @param maf_threshold Minor allele frequency threshold used when building
-#'   `Ginv` or `Hinv`.
-#' @param missing_code Integer value indicating missing genotypes in `X`.
+#'   `Ginv` or `Hinv` internally.
+#' @param missing_code Integer code used to identify missing genotypes in `X`.
 #' @param blend Blending factor applied to `G` before optional tuning.
-#' @param chunk_size Number of SNP columns processed per chunk in G construction.
-#' @param n_threads Number of OpenMP threads.
-#' @param tunedG Integer tuning option for `G`. Use 0 for no tuning.
-#' @param tau Scaling factor multiplying `G^{-1}` in `H^{-1}`.
-#' @param omega Scaling factor multiplying `A22^{-1}` in `H^{-1}`.
-#' @param year_col Character or `NULL` (default). Name of the column in `data`
-#'   with the year of record. Required if `year_window` is specified.
-#' @param year_window Numeric vector of length 2, e.g. `c(2003, 2022)`, or
-#'   `NULL` (default). If `NULL`, all records are used without temporal
-#'   filtering.
-#' @param min_records_per_year Integer. Minimum number of records per MU-year
-#'   combination to consider a year as valid within a MU when computing temporal
-#'   overlap. Only used if `year_window` is not `NULL`.
-#' @param verbose Logical. If `TRUE` (default), prints progress messages.
+#' @param chunk_size Number of SNP columns processed per chunk when building
+#'   `G` internally.
+#' @param n_threads Number of OpenMP threads used in the compiled code.
+#' @param tunedG Integer tuning option for `G`. Use `0` for no tuning.
+#' @param tau Scaling factor multiplying `G^{-1}` in the construction of
+#'   `H^{-1}`.
+#' @param omega Scaling factor multiplying `A22^{-1}` in the construction of
+#'   `H^{-1}`.
+#' @param year_col Optional character string naming the year column in `data`.
+#'   Required when `year_window` is specified.
+#' @param year_window Optional numeric vector of length 2 specifying the time
+#'   window to retain, for example `c(2003, 2022)`. If `NULL`, no temporal
+#'   filtering is applied.
+#' @param min_records_per_year Integer giving the minimum number of records per
+#'   MU-year combination for a year to be considered valid when computing
+#'   temporal overlap. Only used when `year_window` is not `NULL`.
+#' @param verbose Logical. If `TRUE`, progress messages are printed.
 #'
 #' @return An object of class `"connectedness"`, which is a list with:
 #' \describe{
-#'   \item{CD}{Numeric matrix (U x U). Coefficient of Determination for each
-#'     pair of MUs. Diagonal is `NA`. Symmetric.}
-#'   \item{PEVD}{Numeric matrix (U x U). Prediction Error Variance of
-#'     Differences (in units of `sigma2e`). Diagonal is `NA`. Symmetric.}
-#'   \item{qK}{Numeric matrix (U x U). Genetic denominator of the contrast
-#'     based on the relationship matrix actually used (A, G, H, or custom K).}
-#'   \item{qC}{Numeric matrix (U x U). PEV numerator of the contrast, used
-#'     internally to compute CD and PEVD.}
-#'   \item{n_target}{Named integer vector. Number of target animals per MU.}
+#'   \item{CD}{Numeric matrix (U x U). Pairwise CD contrast values between MUs.}
+#'   \item{PEVD}{Numeric matrix (U x U). Pairwise PEVD contrast values between MUs.}
+#'   \item{qK}{Numeric matrix (U x U). Denominator of the contrast under the
+#'     kernel used in the analysis.}
+#'   \item{qC}{Numeric matrix (U x U). Prediction error numerator of the contrast.}
+#'   \item{n_target}{Named numeric vector. Number of target animals per MU.}
 #'   \item{relationship}{Character string indicating the inverse relationship
-#'     matrix used.}
-#'   \item{year_window}{The year window used (or `NULL` if not applied).}
-#'   \item{overlap}{A `data.table` with columns MU1, MU2, Year describing the
-#'     temporal overlap between MU pairs. `NULL` if no year filtering was used.}
-#'   \item{call}{The matched call.}
+#'     matrix used in the analysis.}
+#'   \item{year_window}{The time window used, or `NULL` if no filtering was applied.}
+#'   \item{overlap}{A `data.table` describing temporal overlap between MU pairs,
+#'     or `NULL` if no temporal filtering was requested.}
+#'   \item{call}{The matched function call.}
 #' }
 #'
 #' @details
-#' For each pair of MUs \eqn{(i, j)}, the contrast vector assigns weight
+#' For each pair of management units \eqn{(i, j)}, the contrast assigns weight
 #' \eqn{1/n_i} to animals in MU \eqn{i} and \eqn{-1/n_j} to animals in MU
-#' \eqn{j}, where \eqn{n_i} and \eqn{n_j} are the numbers of target animals.
+#' \eqn{j}, where \eqn{n_i} and \eqn{n_j} are the numbers of target animals in
+#' each unit.
 #'
-#' The metric `qK` always refers to the kernel actually used in the analysis.
-#' Therefore, when the analysis is based on `Ainv`, `Ginv`, or `Hinv`, the
-#' denominator is computed with the corresponding `A`, `G`, or `H` block.
+#' `PEVD` measures the prediction error variance of these contrasts, whereas
+#' `CD` rescales the contrast information relative to the denominator implied by
+#' the kernel actually used in the analysis. The object component `qK` therefore
+#' refers generically to the denominator under `A`, `G`, `H`, or a custom kernel.
+#'
+#' When a time window is specified, the function also reports the years in which
+#' MU pairs overlap according to the observed records and the chosen minimum
+#' record threshold.
 #'
 #' @seealso [renum_pedigree()], [build_Ainv()], [build_Ginv()], [build_Hinv()],
 #'   [print.connectedness()], [plot.connectedness()]
+#'
+#' @examples
+#' \dontrun{
+#' # Pedigree-based connectedness
+#' res_A <- compute_connectedness(
+#'   data          = my_data,
+#'   animal_col    = "animal_id",
+#'   mu_col        = "region",
+#'   fixed_formula = ~ 1 + sex + birth_year,
+#'   sigma2a       = 5.66,
+#'   sigma2e       = 10.24,
+#'   relationship  = "Ainv",
+#'   pedigree      = my_pedigree
+#' )
+#'
+#' # Genomic connectedness
+#' res_G <- compute_connectedness(
+#'   data          = my_genotyped_data,
+#'   animal_col    = "animal_id",
+#'   mu_col        = "region",
+#'   fixed_formula = ~ 1 + sex,
+#'   sigma2a       = 5.66,
+#'   sigma2e       = 10.24,
+#'   relationship  = "Ginv",
+#'   X             = my_genotypes,
+#'   animal_index  = my_index
+#' )
+#'
+#' # Single-step connectedness
+#' res_H <- compute_connectedness(
+#'   data          = my_data,
+#'   animal_col    = "animal_id",
+#'   mu_col        = "region",
+#'   fixed_formula = ~ 1 + sex,
+#'   sigma2a       = 5.66,
+#'   sigma2e       = 10.24,
+#'   relationship  = "Hinv",
+#'   pedigree      = my_pedigree,
+#'   X             = my_genotypes,
+#'   genotyped_idx = my_genotyped_idx
+#' )
+#' }
 #'
 #' @export
 compute_connectedness <- function(
