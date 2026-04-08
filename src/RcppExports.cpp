@@ -18,6 +18,54 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+
+// compute_Ginv
+Rcpp::List compute_Ginv(const Eigen::MatrixXi& X, double maf_threshold, int missing_code, double blend, int chunk_size, int n_threads, int tunedG, Rcpp::Nullable<Rcpp::NumericMatrix> A22);
+RcppExport SEXP _connectedness_compute_Ginv(SEXP XSEXP, SEXP maf_thresholdSEXP, SEXP missing_codeSEXP, SEXP blendSEXP, SEXP chunk_sizeSEXP, SEXP n_threadsSEXP, SEXP tunedGSEXP, SEXP A22SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXi& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type maf_threshold(maf_thresholdSEXP);
+    Rcpp::traits::input_parameter< int >::type missing_code(missing_codeSEXP);
+    Rcpp::traits::input_parameter< double >::type blend(blendSEXP);
+    Rcpp::traits::input_parameter< int >::type chunk_size(chunk_sizeSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    Rcpp::traits::input_parameter< int >::type tunedG(tunedGSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericMatrix> >::type A22(A22SEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_Ginv(X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, A22));
+    return rcpp_result_gen;
+END_RCPP
+}
+
+// compute_Hinv_from_X
+Rcpp::List compute_Hinv_from_X(const Rcpp::IntegerVector& sire, const Rcpp::IntegerVector& dam, const Rcpp::IntegerVector& genotyped_idx, const Eigen::MatrixXi& X, double maf_threshold, int missing_code, double blend, int chunk_size, int n_threads, int tunedG, double tau, double omega, bool return_Ainv, bool return_F, bool return_A22, bool return_Ginv, bool return_allele_freqs);
+RcppExport SEXP _connectedness_compute_Hinv_from_X(SEXP sireSEXP, SEXP damSEXP, SEXP genotyped_idxSEXP, SEXP XSEXP, SEXP maf_thresholdSEXP, SEXP missing_codeSEXP, SEXP blendSEXP, SEXP chunk_sizeSEXP, SEXP n_threadsSEXP, SEXP tunedGSEXP, SEXP tauSEXP, SEXP omegaSEXP, SEXP return_AinvSEXP, SEXP return_FSEXP, SEXP return_A22SEXP, SEXP return_GinvSEXP, SEXP return_allele_freqsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type sire(sireSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type dam(damSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type genotyped_idx(genotyped_idxSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXi& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type maf_threshold(maf_thresholdSEXP);
+    Rcpp::traits::input_parameter< int >::type missing_code(missing_codeSEXP);
+    Rcpp::traits::input_parameter< double >::type blend(blendSEXP);
+    Rcpp::traits::input_parameter< int >::type chunk_size(chunk_sizeSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    Rcpp::traits::input_parameter< int >::type tunedG(tunedGSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type omega(omegaSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_Ainv(return_AinvSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_F(return_FSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_A22(return_A22SEXP);
+    Rcpp::traits::input_parameter< bool >::type return_Ginv(return_GinvSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_allele_freqs(return_allele_freqsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_Hinv_from_X(sire, dam, genotyped_idx, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, tau, omega, return_Ainv, return_F, return_A22, return_Ginv, return_allele_freqs));
+    return rcpp_result_gen;
+END_RCPP
+}
+
 // cd_contrast_mu_mme_sparse
 Rcpp::List cd_contrast_mu_mme_sparse(const Eigen::SparseMatrix<double>& Ainv, const Rcpp::IntegerVector& id_rec, const Eigen::SparseMatrix<double>& X, const Rcpp::IntegerVector& mu_animal, Rcpp::Nullable<Rcpp::LogicalVector> target_nullable, double sigma2a, double sigma2e, Rcpp::Nullable<Rcpp::CharacterVector> mu_names_nullable);
 RcppExport SEXP _connectedness_cd_contrast_mu_mme_sparse(SEXP AinvSEXP, SEXP id_recSEXP, SEXP XSEXP, SEXP mu_animalSEXP, SEXP target_nullableSEXP, SEXP sigma2aSEXP, SEXP sigma2eSEXP, SEXP mu_names_nullableSEXP) {
@@ -39,6 +87,8 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_connectedness_build_Ainv_sparse_RA", (DL_FUNC) &_connectedness_build_Ainv_sparse_RA, 2},
+    {"_connectedness_compute_Ginv", (DL_FUNC) &_connectedness_compute_Ginv, 8},
+    {"_connectedness_compute_Hinv_from_X", (DL_FUNC) &_connectedness_compute_Hinv_from_X, 17},
     {"_connectedness_cd_contrast_mu_mme_sparse", (DL_FUNC) &_connectedness_cd_contrast_mu_mme_sparse, 8},
     {NULL, NULL, 0}
 };

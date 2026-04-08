@@ -36,7 +36,9 @@ build_Ginv <- function(X,
                        tunedG        = 0L,
                        A22           = NULL) {
 
-  X <- as.matrix(X)
+  if (!is.matrix(X)) {
+    X <- as.matrix(X)
+  }
   if (!is.numeric(X) && !is.integer(X)) {
     stop("'X' must be a numeric or integer matrix with genotypes coded as 0/1/2.")
   }
@@ -46,11 +48,8 @@ build_Ginv <- function(X,
   if (nrow(X) < 2L || ncol(X) < 2L) {
     stop("'X' must have at least 2 rows and 2 columns.")
   }
-  if (any(is.na(X))) {
+  if (anyNA(X)) {
     stop("'X' must not contain NA values. Use 'missing_code' for missing genotypes.")
-  }
-  if (any(X != round(X))) {
-    stop("All entries of 'X' must be integer-coded genotypes (e.g. 0/1/2 or missing_code).")
   }
   storage.mode(X) <- "integer"
 
@@ -68,14 +67,16 @@ build_Ginv <- function(X,
     stop("'A22' must be supplied when 'tunedG' is 2 or 3.")
   }
 
-  compute_Ginv(
-    X             = X,
-    maf_threshold = maf_threshold,
-    missing_code  = as.integer(missing_code),
-    blend         = blend,
-    chunk_size    = as.integer(chunk_size),
-    n_threads     = as.integer(n_threads),
-    tunedG        = as.integer(tunedG),
-    A22           = A22
+  .Call(
+    `_connectedness_compute_Ginv`,
+    X,
+    maf_threshold,
+    as.integer(missing_code),
+    blend,
+    as.integer(chunk_size),
+    as.integer(n_threads),
+    as.integer(tunedG),
+    A22,
+    PACKAGE = "connectedness"
   )
 }
