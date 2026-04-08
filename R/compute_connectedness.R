@@ -415,15 +415,17 @@ compute_connectedness <- function(
   if (verbose) {
     message(sprintf("Computing CD and PEVD via MME using %s...", relationship))
   }
-  res_cpp <- cd_contrast_mu_mme_sparse(
-    Kinv              = rel_matrix,
-    id_rec            = id_rec,
-    X                 = Xsp,
-    mu_animal         = as.integer(mu_animal),
-    target_nullable   = target,
-    sigma2a           = sigma2a,
-    sigma2e           = sigma2e,
-    mu_names_nullable = as.character(mu_levels)
+  res_cpp <- .Call(
+    `_connectedness_cd_contrast_mu_mme_sparse`,
+    rel_matrix,
+    id_rec,
+    Xsp,
+    as.integer(mu_animal),
+    target,
+    sigma2a,
+    sigma2e,
+    as.character(mu_levels),
+    PACKAGE = "connectedness"
   )
 
   pevd_out <- res_cpp$PEVD

@@ -50,5 +50,5 @@ build_Ainv <- function(renum) {
     stop("NA values found in new_sire or new_dam. Check pedigree renumbering.")
   }
 
-  build_Ainv_sparse_RA(sire = sire_vec, dam = dam_vec)
+  .Call(`_connectedness_build_Ainv_sparse_RA`, sire_vec, dam_vec, PACKAGE = "connectedness")
 }
