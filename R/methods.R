@@ -122,6 +122,33 @@ plot.connectedness <- function(x,
     df
   }
 
+  .prep_overlap_data <- function(dt) {
+    dt <- as.data.frame(dt, stringsAsFactors = FALSE)
+    if (!all(c("MU1", "MU2", "Year") %in% names(dt))) {
+      stop("'overlap' must contain columns MU1, MU2, and Year.")
+    }
+    if (!nrow(dt)) return(list(points = dt, summary = dt))
+
+    dt$MU1 <- as.character(dt$MU1)
+    dt$MU2 <- as.character(dt$MU2)
+    dt$Year <- as.integer(dt$Year)
+    dt$pair <- paste(dt$MU1, dt$MU2, sep = "\u2013")
+
+    yrs <- split(dt$Year, dt$pair)
+    summary <- data.frame(
+      pair = names(yrs),
+      start_year = vapply(yrs, min, integer(1)),
+      end_year   = vapply(yrs, max, integer(1)),
+      n_years    = vapply(yrs, function(z) length(unique(z)), integer(1)),
+      stringsAsFactors = FALSE
+    )
+    summary <- summary[order(summary$start_year, summary$end_year, summary$pair), , drop = FALSE]
+    summary$pair <- factor(summary$pair, levels = rev(summary$pair))
+
+    dt$pair <- factor(dt$pair, levels = levels(summary$pair))
+    list(points = dt, summary = summary)
+  }
+
   .plot_one_base <- function(mat, main, palette_fun, zlim = NULL) {
     mu_names <- rownames(mat)
     U <- nrow(mat)
@@ -180,43 +207,102 @@ plot.connectedness <- function(x,
     }
   }
 
-  .plot_overlap_base <- function(dt) {
-    dt <- as.data.frame(dt, stringsAsFactors = FALSE)
-    if (!all(c("MU1", "MU2", "Year") %in% names(dt))) {
-      stop("'overlap' must contain columns MU1, MU2, and Year.")
-    }
-    if (!nrow(dt)) {
+  .plot_overlap_base <- function(dt, year_window = NULL) {
+    ov <- .prep_overlap_data(dt)
+    pts <- ov$points
+    seg <- ov$summary
+
+    if (!nrow(pts)) {
       message("No temporal overlap to plot.")
       return(invisible(NULL))
     }
 
-    dt$MU1 <- as.character(dt$MU1)
-    dt$MU2 <- as.character(dt$MU2)
-    dt$Year <- as.integer(dt$Year)
+    y <- seq_len(nrow(seg))
+    names(y) <- as.character(seg$pair)
+    pts$y <- y[as.character(pts$pair)]
 
-    pair <- paste(dt$MU1, dt$MU2, sep = "\u2013")
-    pairs <- sort(unique(pair))
-    y_pos <- as.numeric(match(pair, pairs))
-    years <- as.numeric(dt$Year)
+    xlim <- range(c(pts$Year, seg$start_year, seg$end_year), na.rm = TRUE)
+    if (!is.null(year_window)) {
+      xlim <- range(c(xlim, year_window), na.rm = TRUE)
+    }
 
     old_par <- graphics::par(no.readonly = TRUE)
     on.exit(graphics::par(old_par), add = TRUE)
-    graphics::par(mar = c(5, 10, 4, 2))
+    graphics::par(mar = c(5, 10, 4, 4))
+
     graphics::plot(
-      x = years,
-      y = y_pos,
-      pch = 19,
-      cex = 0.9,
+      x = NA, y = NA,
+      xlim = xlim,
+      ylim = c(0.5, nrow(seg) + 0.5),
       yaxt = "n",
       xlab = "Year",
       ylab = "",
-      main = "Temporal overlap between MU pairs"
+      main = "Temporal overlap between MU pairs",
+      bty = "n"
     )
-    graphics::axis(2, at = seq_along(pairs), labels = pairs, las = 2)
-    graphics::grid(nx = NA, ny = NULL, lty = 3)
+    graphics::abline(v = pretty(xlim), col = "grey90", lty = 1)
+    graphics::segments(seg$start_year, y, seg$end_year, y, lwd = 3, col = "grey60")
+    graphics::points(pts$Year, pts$y, pch = 19, cex = 1.0)
+    graphics::axis(2, at = y, labels = as.character(seg$pair), las = 2)
+    graphics::mtext(sprintf("n overlap years: %s", paste(seg$n_years, collapse = ", ")),
+                    side = 4, line = 0.5, cex = 0.8)
   }
 
   use_ggplot <- requireNamespace("ggplot2", quietly = TRUE)
+
+  if (which == "overlap") {
+    if (!do_overlap) {
+      message("No temporal overlap to plot.")
+      return(invisible(x))
+    }
+
+    if (use_ggplot) {
+      ov <- .prep_overlap_data(x$overlap)
+      pts <- ov$points
+      seg <- ov$summary
+
+      p_overlap <- ggplot2::ggplot() +
+        ggplot2::geom_segment(
+          data = seg,
+          ggplot2::aes(x = start_year, xend = end_year, y = pair, yend = pair),
+          linewidth = 1.2,
+          color = "grey55"
+        ) +
+        ggplot2::geom_point(
+          data = pts,
+          ggplot2::aes(x = Year, y = pair),
+          size = 2.8,
+          alpha = 0.95
+        ) +
+        ggplot2::geom_text(
+          data = seg,
+          ggplot2::aes(x = end_year, y = pair, label = paste0("n=", n_years)),
+          nudge_x = 0.15,
+          hjust = 0,
+          size = 3.4
+        ) +
+        ggplot2::labs(
+          title = "Temporal overlap between MU pairs",
+          subtitle = "Segments show the observed overlap span; points show overlap years",
+          x = "Year",
+          y = NULL
+        ) +
+        ggplot2::theme_minimal(base_size = 12) +
+        ggplot2::theme(
+          panel.grid.minor = ggplot2::element_blank(),
+          plot.title = ggplot2::element_text(face = "bold")
+        )
+
+      if (!is.null(x$year_window)) {
+        p_overlap <- p_overlap + ggplot2::coord_cartesian(xlim = range(x$year_window))
+      }
+      print(p_overlap)
+      return(invisible(x))
+    }
+
+    .plot_overlap_base(x$overlap, year_window = x$year_window)
+    return(invisible(x))
+  }
 
   if (use_ggplot) {
     plot_list <- list()
@@ -284,29 +370,6 @@ plot.connectedness <- function(x,
       plot_list[[length(plot_list) + 1L]] <- p_pevd
     }
 
-    if (do_overlap) {
-      dt <- as.data.frame(x$overlap, stringsAsFactors = FALSE)
-      if (nrow(dt)) {
-        dt$MU1 <- as.character(dt$MU1)
-        dt$MU2 <- as.character(dt$MU2)
-        dt$Year <- as.integer(dt$Year)
-        dt$pair <- paste(dt$MU1, dt$MU2, sep = "\u2013")
-        p_overlap <- ggplot2::ggplot(dt, ggplot2::aes(x = Year, y = stats::reorder(pair, Year))) +
-          ggplot2::geom_point(size = 2.4, alpha = 0.9) +
-          ggplot2::labs(
-            title = "Temporal overlap between MU pairs",
-            x = "Year",
-            y = NULL
-          ) +
-          ggplot2::theme_minimal(base_size = 12) +
-          ggplot2::theme(
-            panel.grid.minor = ggplot2::element_blank(),
-            plot.title = ggplot2::element_text(face = "bold")
-          )
-        plot_list[[length(plot_list) + 1L]] <- p_overlap
-      }
-    }
-
     if (length(plot_list) == 1L) {
       print(plot_list[[1L]])
     } else {
@@ -338,10 +401,6 @@ plot.connectedness <- function(x,
         main = paste0("PEVD (", x$relationship, ")"),
         palette_fun = function(n) grDevices::colorRampPalette(c("#fff5eb", "#b30000"))(n)
       )
-    }
-
-    if (do_overlap) {
-      .plot_overlap_base(x$overlap)
     }
   }
 
