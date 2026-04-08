@@ -2,9 +2,9 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 build_Ainv_sparse_RA <- function(sire, dam) {
-    .Call(`_connectedness_build_Ainv_sparse_RA`, sire, dam)
+    .Call(`_connectedness_build_Ainv_sparse_RA`, PACKAGE = 'connectedness', sire, dam)
 }
 
 cd_contrast_mu_mme_sparse <- function(Ainv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL) {
-    .Call(`_connectedness_cd_contrast_mu_mme_sparse`, Ainv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable)
+    .Call(`_connectedness_cd_contrast_mu_mme_sparse`, PACKAGE = 'connectedness', Ainv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable)
 }
