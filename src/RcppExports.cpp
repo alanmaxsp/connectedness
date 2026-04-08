@@ -7,15 +7,14 @@
 using namespace Rcpp;
 
 // build_Ainv_sparse_RA
-Rcpp::List build_Ainv_sparse_RA(const Rcpp::IntegerVector& sire, const Rcpp::IntegerVector& dam, bool cache_parent_pairs);
-RcppExport SEXP _connectedness_build_Ainv_sparse_RA(SEXP sireSEXP, SEXP damSEXP, SEXP cache_parent_pairsSEXP) {
+Rcpp::List build_Ainv_sparse_RA(const Rcpp::IntegerVector& sire, const Rcpp::IntegerVector& dam);
+RcppExport SEXP _connectedness_build_Ainv_sparse_RA(SEXP sireSEXP, SEXP damSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type sire(sireSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type dam(damSEXP);
-    Rcpp::traits::input_parameter< bool >::type cache_parent_pairs(cache_parent_pairsSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_Ainv_sparse_RA(sire, dam, cache_parent_pairs));
+    rcpp_result_gen = Rcpp::wrap(build_Ainv_sparse_RA(sire, dam));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -39,7 +38,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_connectedness_build_Ainv_sparse_RA", (DL_FUNC) &_connectedness_build_Ainv_sparse_RA, 3},
+    {"_connectedness_build_Ainv_sparse_RA", (DL_FUNC) &_connectedness_build_Ainv_sparse_RA, 2},
     {"_connectedness_cd_contrast_mu_mme_sparse", (DL_FUNC) &_connectedness_cd_contrast_mu_mme_sparse, 8},
     {NULL, NULL, 0}
 };
