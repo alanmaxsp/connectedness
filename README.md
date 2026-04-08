@@ -66,7 +66,7 @@ res_A <- compute_connectedness(
 )
 
 print(res_A)
-plot(res_A, which = "all")
+plot.connectedness(res_A, which = "all")
 ```
 
 If you want `PEVD / sigma2a` instead of `PEVD`, use:
@@ -160,7 +160,7 @@ res_time <- compute_connectedness(
   min_records_per_year = 10
 )
 
-plot(res_time, which = "overlap")
+plot.connectedness(res_time, which = "overlap")
 ```
 
 ## References

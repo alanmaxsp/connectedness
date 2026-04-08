@@ -75,8 +75,8 @@ res <- compute_connectedness(
 )
 
 print(res)
-plot(res, which = "CD")
-plot(res, which = "PEVD")
+plot.connectedness(res, which = "CD")
+plot.connectedness(res, which = "PEVD")
 ```
 
 That is the shortest mental model of the package:
@@ -316,7 +316,7 @@ res_time <- compute_connectedness(
   min_records_per_year = 1
 )
 
-plot(res_time, which = "overlap")
+plot.connectedness(res_time, which = "overlap")
 ```
 
 This is a useful extension of the contrast logic: connectedness is not only a
@@ -328,9 +328,9 @@ represented in the same time horizon**.
 The package provides a direct plotting method for a first visual inspection.
 
 ```{r eval=FALSE}
-plot(res_strong, which = "CD")
-plot(res_strong, which = "PEVD")
-plot(res_strong, which = "all")
+plot.connectedness(res_strong, which = "CD")
+plot.connectedness(res_strong, which = "PEVD")
+plot.connectedness(res_strong, which = "all")
 ```
 
 A quick visual check is often the easiest way to identify MU pairs that are
