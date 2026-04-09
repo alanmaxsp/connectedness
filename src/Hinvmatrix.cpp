@@ -571,22 +571,19 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
     Rcout << "Cholesky factorization (LLT)..." << std::endl;
     LLT<MatrixXd> llt(G);
 
-    MatrixXd Ginv;
-    if (llt.info() == Success) {
-      Rcout << "Inverting via triangular solve..." << std::endl;
-      MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
-      Ginv = Linv.transpose() * Linv;
-      Ginv = (Ginv + Ginv.transpose()) * 0.5;
-      Rcout << "LLT successful." << std::endl;
-    } else {
-      Rcout << "LLT failed. Trying LDLT (G may be near-singular after tuning/blending)..." << std::endl;
-      LDLT<MatrixXd> ldlt(G);
-      if (ldlt.info() != Success)
-        stop("Matrix inversion failed. G is not positive semi-definite. Try increasing 'blend' or revising tuning.");
-      Ginv = ldlt.solve(MatrixXd::Identity(n, n));
-      Ginv = (Ginv + Ginv.transpose()) * 0.5;
-      Rcout << "LDLT successful." << std::endl;
+    if (llt.info() != Success) {
+      stop(
+        "G is not numerically positive definite and cannot be inverted without regularization. "
+        "Set a positive 'blend' value or revise marker filtering/tuning. "
+        "No LDLT fallback is used because it may return an unstable inverse."
+      );
     }
+
+    Rcout << "Inverting via triangular solve..." << std::endl;
+    MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
+    MatrixXd Ginv = Linv.transpose() * Linv;
+    Ginv = (Ginv + Ginv.transpose()) * 0.5;
+    Rcout << "LLT successful." << std::endl;
 
     NumericVector freqs(m_valid);
     for (int i = 0; i < m_valid; ++i)
