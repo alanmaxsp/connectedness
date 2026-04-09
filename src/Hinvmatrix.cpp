@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <limits>
 
 // [[Rcpp::plugins(openmp)]]
 // [[Rcpp::depends(RcppEigen)]]
@@ -458,6 +459,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
         << n << " animals)..." << std::endl;
 
   VectorXd p(m);
+  std::vector<int> obs_count(m, 0);
 
 #pragma omp parallel for num_threads(n_threads) schedule(static)
   for (int j = 0; j < m; ++j) {
@@ -472,7 +474,9 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
         ++count;
       }
     }
-    p(j) = (count > 0) ? sum / (2.0 * count) : 0.5;
+    obs_count[j] = count;
+    p(j) = (count > 0) ? sum / (2.0 * count)
+                       : std::numeric_limits<double>::quiet_NaN();
   }
 
   Rcout << "Filtering SNPs by MAF >= " << maf_threshold << "..." << std::endl;
@@ -483,7 +487,10 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
   for (int j = 0; j < m; ++j) {
     double f = p(j);
     keep[j] = static_cast<unsigned char>(
-      std::isfinite(f) && (f >= maf_threshold) && (f <= 1.0 - maf_threshold)
+      (obs_count[j] > 0) &&
+      std::isfinite(f) &&
+      (f >= maf_threshold) &&
+      (f <= 1.0 - maf_threshold)
     );
   }
 
