@@ -1,7 +1,8 @@
-#' Build the sparse inverse of the H matrix for ssGBLUP
+#' Build the sparse inverse of the H matrix
 #'
-#' Computes \eqn{H^{-1}} for single-step GBLUP from a renumbered pedigree and a
-#' genotype matrix. Internally, the function performs the full pipeline:
+#' Computes \eqn{H^{-1}} from a renumbered pedigree and a genotype matrix using
+#' a combined pedigree-genomic relationship structure (H-kernel). Internally,
+#' the function performs the full pipeline:
 #' \enumerate{
 #'   \item build \eqn{A^{-1}},
 #'   \item compute individual inbreeding coefficients,

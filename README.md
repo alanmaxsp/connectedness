@@ -8,7 +8,7 @@ mixed model equations (MME), and supports analyses based on:
 
 * **pedigree relationships** through (A^{-1}),
 * **genomic relationships** through (G^{-1}),
-* **single-step relationships** through (H^{-1}), and
+* **combined pedigree-genomic relationships** through (H^{-1}), and
 * **custom inverse kernels** supplied by the user.
 
 ## What problem does it solve?
@@ -21,7 +21,7 @@ across units are less informative.
 `connectedness` quantifies pairwise connectedness between management units using
 the same relationship structure assumed in the analysis, allowing users to
 assess how strongly units are genetically linked under pedigree-based, genomic,
-or single-step settings.
+or combined pedigree-genomic settings.
 
 ## Metrics
 
@@ -102,7 +102,7 @@ res_G <- compute_connectedness(
 )
 ```
 
-### Single-step connectedness ((H^{-1}))
+### H-kernel connectedness ((H^{-1}))
 
 ```r
 res_H <- compute_connectedness(
@@ -178,3 +178,5 @@ precision and connectedness in mixed linear models of genetic evaluation.
 *Genetics Selection Evolution*, 28, 359–378.
 
 Yu, H., & Morota, G. (2021). GCA: An R package for genetic connectedness analysis using pedigree and genomic data. *BMC Genomics*, 22, 119.
+
+Legarra, A., Aguilar, I., & Misztal, I. (2009). A relationship matrix including full pedigree and genomic information. *Journal of Dairy Science*, 92(9), 4656–4663.

@@ -7,7 +7,7 @@
 #'
 #' The connectedness analysis can be based on a pedigree-derived inverse
 #' relationship matrix (`Ainv`), a genomic inverse relationship matrix (`Ginv`),
-#' a single-step inverse relationship matrix (`Hinv`), or a user-supplied
+#' a combined pedigree-genomic inverse relationship matrix (`Hinv`), or a user-supplied
 #' inverse kernel.
 #'
 #' @param data A data frame containing the records used to define the analysis.

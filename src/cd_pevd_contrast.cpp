@@ -17,7 +17,7 @@ static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, doub
 //' \eqn{K^{-1}}. Therefore, it can be used with:
 //' \itemize{
 //'   \item \code{Ainv} for pedigree-based connectedness,
-//'   \item \code{Hinv} for single-step connectedness,
+//'   \item \code{Hinv} for connectedness under a combined pedigree-genomic kernel,
 //'   \item or any other compatible inverse kernel matrix.
 //' }
 //'

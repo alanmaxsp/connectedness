@@ -110,7 +110,8 @@ static inline MatrixXd tune_G_affine_cpp(const MatrixXd& G,
  //' @param sire Integer vector of sire indices (0 = unknown), length N.
  //' @param dam  Integer vector of dam indices (0 = unknown), length N.
  //' @return Numeric vector of inbreeding coefficients F, length N.
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  NumericVector compute_F_ML92(const IntegerVector& sire,
                               const IntegerVector& dam) {
@@ -221,7 +222,8 @@ static inline MatrixXd tune_G_affine_cpp(const MatrixXd& G,
  //' @param dam  Integer vector of dam  indices (0 = unknown), length N.
  //' @return List with \code{Ainv} (dgCMatrix, N x N) and \code{F}
  //'   (numeric vector of inbreeding coefficients, length N).
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  List build_Ainv_sparse_RA(const IntegerVector& sire,
                            const IntegerVector& dam) {
@@ -390,7 +392,8 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
 
 //' Build the dense A22 submatrix for genotyped animals
  //'
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  NumericMatrix build_A22(const IntegerVector& sire,
                          const IntegerVector& dam,
@@ -615,7 +618,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 
 //' Compute dense G-inverse for genotyped animals (VanRaden method 1)
  //'
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  List compute_Ginv(const Eigen::MatrixXi& X,
                    double maf_threshold = 0.05,
@@ -659,12 +663,13 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 // 5. compute_Hinv
 // ===========================================================================
 
-//' Compute sparse H-inverse for single-step GBLUP (ssGBLUP)
+//' Compute sparse H-inverse for a combined pedigree-genomic relationship model
  //'
  //' Implements the generalized form:
  //' \deqn{H^{-1} = A^{-1} + \begin{bmatrix} 0 & 0 \\ 0 & \tau G^{-1} - \omega A_{22}^{-1} \end{bmatrix}}
  //'
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  Eigen::SparseMatrix<double> compute_Hinv(
      const Eigen::SparseMatrix<double>& Ainv,
@@ -787,7 +792,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
  //' @param return_Ginv Return Ginv in output list. Default FALSE.
  //' @param return_allele_freqs Return allele frequencies in output list. Default FALSE.
  //' @return List containing Hinv and selected optional objects.
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  List compute_Hinv_from_X(const Rcpp::IntegerVector& sire,
                           const Rcpp::IntegerVector& dam,
