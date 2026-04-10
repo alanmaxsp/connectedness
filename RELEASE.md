@@ -9,6 +9,12 @@ Rcpp::compileAttributes()
 devtools::document()
 ```
 
+Or run:
+
+```bash
+Rscript scripts/update_docs.R
+```
+
 ## 2) Run checks and tests
 
 ```r
