@@ -42,7 +42,8 @@ static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, doub
 //' @param sigma2e Residual variance.
 //' @param mu_names_nullable Optional character vector of MU names (length U).
 //' @return List with CD, PEVD, qK, qC matrices (U x U) and n_target_by_MU.
-//' @export
+//' @keywords internal
+//' @noRd
 // [[Rcpp::export]]
 Rcpp::List cd_contrast_mu_mme_sparse(
     const Eigen::SparseMatrix<double>& Kinv,
