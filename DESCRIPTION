@@ -4,8 +4,8 @@ Title: Connectedness Metrics for Genetic Evaluation Across Management Units
 Version: 0.1.0
 Authors@R: person(
     given = "Alan",
-    family = "Max",
-    email = "alanmaxsp@users.noreply.github.com",
+    family = "Pardo",
+    email = "pardo.alan@inta.gob.ar",
     role = c("aut", "cre")
   )
 Description: Computes connectedness metrics between management units (MUs)
@@ -20,7 +20,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Depends:
     R (>= 4.1.0)
 Imports:
@@ -39,3 +39,4 @@ Suggests:
 VignetteBuilder: knitr
 URL: https://github.com/alanmaxsp/connectedness
 BugReports: https://github.com/alanmaxsp/connectedness/issues
+Config/testthat/edition: 3
