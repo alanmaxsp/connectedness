@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <limits>
 
 // [[Rcpp::plugins(openmp)]]
 // [[Rcpp::depends(RcppEigen)]]
@@ -109,7 +110,8 @@ static inline MatrixXd tune_G_affine_cpp(const MatrixXd& G,
  //' @param sire Integer vector of sire indices (0 = unknown), length N.
  //' @param dam  Integer vector of dam indices (0 = unknown), length N.
  //' @return Numeric vector of inbreeding coefficients F, length N.
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  NumericVector compute_F_ML92(const IntegerVector& sire,
                               const IntegerVector& dam) {
@@ -220,7 +222,8 @@ static inline MatrixXd tune_G_affine_cpp(const MatrixXd& G,
  //' @param dam  Integer vector of dam  indices (0 = unknown), length N.
  //' @return List with \code{Ainv} (dgCMatrix, N x N) and \code{F}
  //'   (numeric vector of inbreeding coefficients, length N).
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  List build_Ainv_sparse_RA(const IntegerVector& sire,
                            const IntegerVector& dam) {
@@ -389,7 +392,8 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
 
 //' Build the dense A22 submatrix for genotyped animals
  //'
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  NumericMatrix build_A22(const IntegerVector& sire,
                          const IntegerVector& dam,
@@ -458,6 +462,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
         << n << " animals)..." << std::endl;
 
   VectorXd p(m);
+  std::vector<int> obs_count(m, 0);
 
 #pragma omp parallel for num_threads(n_threads) schedule(static)
   for (int j = 0; j < m; ++j) {
@@ -472,7 +477,9 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
         ++count;
       }
     }
-    p(j) = (count > 0) ? sum / (2.0 * count) : 0.5;
+    obs_count[j] = count;
+    p(j) = (count > 0) ? sum / (2.0 * count)
+                       : std::numeric_limits<double>::quiet_NaN();
   }
 
   Rcout << "Filtering SNPs by MAF >= " << maf_threshold << "..." << std::endl;
@@ -483,7 +490,10 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
   for (int j = 0; j < m; ++j) {
     double f = p(j);
     keep[j] = static_cast<unsigned char>(
-      std::isfinite(f) && (f >= maf_threshold) && (f <= 1.0 - maf_threshold)
+      (obs_count[j] > 0) &&
+      std::isfinite(f) &&
+      (f >= maf_threshold) &&
+      (f <= 1.0 - maf_threshold)
     );
   }
 
@@ -571,22 +581,19 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
     Rcout << "Cholesky factorization (LLT)..." << std::endl;
     LLT<MatrixXd> llt(G);
 
-    MatrixXd Ginv;
-    if (llt.info() == Success) {
-      Rcout << "Inverting via triangular solve..." << std::endl;
-      MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
-      Ginv = Linv.transpose() * Linv;
-      Ginv = (Ginv + Ginv.transpose()) * 0.5;
-      Rcout << "LLT successful." << std::endl;
-    } else {
-      Rcout << "LLT failed. Trying LDLT (G may be near-singular after tuning/blending)..." << std::endl;
-      LDLT<MatrixXd> ldlt(G);
-      if (ldlt.info() != Success)
-        stop("Matrix inversion failed. G is not positive semi-definite. Try increasing 'blend' or revising tuning.");
-      Ginv = ldlt.solve(MatrixXd::Identity(n, n));
-      Ginv = (Ginv + Ginv.transpose()) * 0.5;
-      Rcout << "LDLT successful." << std::endl;
+    if (llt.info() != Success) {
+      stop(
+        "G is not numerically positive definite and cannot be inverted without regularization. "
+        "Set a positive 'blend' value or revise marker filtering/tuning. "
+        "No LDLT fallback is used because it may return an unstable inverse."
+      );
     }
+
+    Rcout << "Inverting via triangular solve..." << std::endl;
+    MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
+    MatrixXd Ginv = Linv.transpose() * Linv;
+    Ginv = (Ginv + Ginv.transpose()) * 0.5;
+    Rcout << "LLT successful." << std::endl;
 
     NumericVector freqs(m_valid);
     for (int i = 0; i < m_valid; ++i)
@@ -611,7 +618,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 
 //' Compute dense G-inverse for genotyped animals (VanRaden method 1)
  //'
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  List compute_Ginv(const Eigen::MatrixXi& X,
                    double maf_threshold = 0.05,
@@ -655,12 +663,13 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 // 5. compute_Hinv
 // ===========================================================================
 
-//' Compute sparse H-inverse for single-step GBLUP (ssGBLUP)
+//' Compute sparse H-inverse for a combined pedigree-genomic relationship model
  //'
  //' Implements the generalized form:
  //' \deqn{H^{-1} = A^{-1} + \begin{bmatrix} 0 & 0 \\ 0 & \tau G^{-1} - \omega A_{22}^{-1} \end{bmatrix}}
  //'
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  Eigen::SparseMatrix<double> compute_Hinv(
      const Eigen::SparseMatrix<double>& Ainv,
@@ -783,7 +792,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
  //' @param return_Ginv Return Ginv in output list. Default FALSE.
  //' @param return_allele_freqs Return allele frequencies in output list. Default FALSE.
  //' @return List containing Hinv and selected optional objects.
- //' @export
+ //' @keywords internal
+ //' @noRd
  // [[Rcpp::export]]
  List compute_Hinv_from_X(const Rcpp::IntegerVector& sire,
                           const Rcpp::IntegerVector& dam,
