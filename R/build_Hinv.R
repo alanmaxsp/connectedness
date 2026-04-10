@@ -22,7 +22,7 @@
 #' @param blend Blending factor applied to \eqn{G} before optional tuning.
 #' @param chunk_size Number of SNP columns processed per chunk.
 #' @param n_threads Number of OpenMP threads.
-#' @param tunedG Integer tuning option for \eqn{G}. Use 0 for no tuning.
+#' @param tunedG Integer tuning option for \eqn{G}: `0` = no tuning; `1` = standardize by matching mean diagonal/off-diagonal contrast within \eqn{G}; `2` = affine tuning to match \eqn{A_{22}} mean diagonal and off-diagonal; `3` = shift \eqn{G} by a constant so its global mean matches \eqn{A_{22}}.
 #' @param tau Scaling factor multiplying \eqn{G^{-1}} in the final expression.
 #' @param omega Scaling factor multiplying \eqn{A_{22}^{-1}} in the final expression.
 #' @param return_Ainv Logical; return `Ainv` in the output list.

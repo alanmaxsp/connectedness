@@ -49,7 +49,7 @@
 #' @param chunk_size Number of SNP columns processed per chunk when building
 #'   `G` internally.
 #' @param n_threads Number of OpenMP threads used in the compiled code.
-#' @param tunedG Integer tuning option for `G`. Use `0` for no tuning.
+#' @param tunedG Integer tuning option for `G`: `0` = no tuning; `1` = standardize by matching mean diagonal/off-diagonal contrast within `G`; `2` = affine tuning to match `A22` mean diagonal and off-diagonal; `3` = shift `G` by a constant so its global mean matches `A22`.
 #' @param tau Scaling factor multiplying `G^{-1}` in the construction of
 #'   `H^{-1}`.
 #' @param omega Scaling factor multiplying `A22^{-1}` in the construction of
