@@ -32,7 +32,7 @@ The package currently supports connectedness computed from:
 
 - **A-inverse** (pedigree-based connectedness),
 - **G-inverse** (genomic connectedness),
-- **H-inverse** (single-step connectedness), and
+- **H-inverse** (combined pedigree-genomic connectedness), and
 - a **custom inverse kernel** supplied by the user.
 
 ## Which metrics does the package compute?
@@ -240,7 +240,7 @@ A practical way to think about the four options is:
 - use **Ainv** when the target notion of connectedness is pedigree-based,
 - use **Ginv** when realized genomic links are the main object of interest,
 - use **Hinv** when you want the connectedness measure to align with a
-  single-step evaluation context,
+  combined pedigree-genomic evaluation context,
 - use **custom** when your inverse kernel is built elsewhere.
 
 ### Example: G-inverse
