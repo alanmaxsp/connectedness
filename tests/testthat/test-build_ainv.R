@@ -6,8 +6,8 @@ test_that("build_Ainv devuelve Ainv sparse y F con dimensiones correctas", {
     stringsAsFactors = FALSE
   )
   
-  ren <- connectedness::renum_pedigree(ped, verbose = FALSE)
-  out <- connectedness::build_Ainv(ren)
+  ren <- renum_pedigree(ped, verbose = FALSE)
+  out <- build_Ainv(ren)
   
   expect_type(out, "list")
   expect_true(all(c("Ainv", "F") %in% names(out)))
@@ -20,7 +20,7 @@ test_that("build_Ainv devuelve Ainv sparse y F con dimensiones correctas", {
 test_that("build_Ainv falla si faltan columnas requeridas", {
   bad <- data.frame(new_id = 1:3, new_sire = c(0,0,1))
   expect_error(
-    connectedness::build_Ainv(bad),
+    build_Ainv(bad),
     "must have columns: new_id, new_sire, new_dam"
   )
 })

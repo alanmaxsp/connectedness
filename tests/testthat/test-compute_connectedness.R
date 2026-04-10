@@ -10,7 +10,7 @@ test_that("compute_connectedness con relación custom devuelve objeto connectedn
   Kinv <- Matrix::Diagonal(4)
   animal_index <- setNames(1:4, c("A", "B", "C", "D"))
   
-  out <- connectedness::compute_connectedness(
+  out <- compute_connectedness(
     data = data,
     animal_col = "animal_id",
     mu_col = "region",
