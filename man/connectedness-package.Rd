@@ -17,7 +17,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Alan Max \email{alanmaxsp@users.noreply.github.com}
+\strong{Maintainer}: Alan Pardo \email{pardo.alan@inta.gob.ar}
 
 }
 \keyword{internal}

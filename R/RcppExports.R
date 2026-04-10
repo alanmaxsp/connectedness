@@ -20,27 +20,27 @@ NULL
 NULL
 
 compute_F_ML92 <- function(sire, dam) {
-    .Call('_connectedness_compute_F_ML92', PACKAGE = 'connectedness', sire, dam)
+    .Call(`_connectedness_compute_F_ML92`, sire, dam)
 }
 
 build_Ainv_sparse_RA <- function(sire, dam) {
-    .Call('_connectedness_build_Ainv_sparse_RA', PACKAGE = 'connectedness', sire, dam)
+    .Call(`_connectedness_build_Ainv_sparse_RA`, sire, dam)
 }
 
 build_A22 <- function(sire, dam, genotyped_idx, F) {
-    .Call('_connectedness_build_A22', PACKAGE = 'connectedness', sire, dam, genotyped_idx, F)
+    .Call(`_connectedness_build_A22`, sire, dam, genotyped_idx, F)
 }
 
 compute_Ginv <- function(X, maf_threshold = 0.05, missing_code = 5L, blend = 0.05, chunk_size = 2000L, n_threads = 1L, tunedG = 0L, A22 = NULL) {
-    .Call('_connectedness_compute_Ginv', PACKAGE = 'connectedness', X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, A22)
+    .Call(`_connectedness_compute_Ginv`, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, A22)
 }
 
 compute_Hinv <- function(Ainv, Ginv, A22, genotyped_idx, tau = 1.0, omega = 1.0) {
-    .Call('_connectedness_compute_Hinv', PACKAGE = 'connectedness', Ainv, Ginv, A22, genotyped_idx, tau, omega)
+    .Call(`_connectedness_compute_Hinv`, Ainv, Ginv, A22, genotyped_idx, tau, omega)
 }
 
 compute_Hinv_from_X <- function(sire, dam, genotyped_idx, X, maf_threshold = 0.05, missing_code = 5L, blend = 0.05, chunk_size = 2000L, n_threads = 1L, tunedG = 0L, tau = 1.0, omega = 1.0, return_Ainv = FALSE, return_F = FALSE, return_A22 = FALSE, return_Ginv = FALSE, return_allele_freqs = FALSE) {
-    .Call('_connectedness_compute_Hinv_from_X', PACKAGE = 'connectedness', sire, dam, genotyped_idx, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, tau, omega, return_Ainv, return_F, return_A22, return_Ginv, return_allele_freqs)
+    .Call(`_connectedness_compute_Hinv_from_X`, sire, dam, genotyped_idx, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, tau, omega, return_Ainv, return_F, return_A22, return_Ginv, return_allele_freqs)
 }
 
 #' Compute CD and PEVD via MME contrast using a generic inverse relationship matrix
@@ -78,6 +78,6 @@ compute_Hinv_from_X <- function(sire, dam, genotyped_idx, X, maf_threshold = 0.0
 #' @keywords internal
 #' @noRd
 cd_contrast_mu_mme_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL) {
-    .Call('_connectedness_cd_contrast_mu_mme_sparse', PACKAGE = 'connectedness', Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable)
+    .Call(`_connectedness_cd_contrast_mu_mme_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable)
 }
 
