@@ -2,13 +2,18 @@ Package: connectedness
 Type: Package
 Title: Connectedness Metrics for Genetic Evaluation Across Management Units
 Version: 0.1.0
-Authors@R: person("Alan", "", email = "alan@example.com", role = c("aut", "cre"))
+Authors@R: person(
+    given = "Alan",
+    family = "Pardo",
+    email = "pardo.alan@inta.gob.ar",
+    role = c("aut", "cre")
+  )
 Description: Computes connectedness metrics between management units (MUs)
     in animal breeding data under the contrast approach via Mixed Model
     Equations (MME). The package implements Coefficient of Determination
     (CD contrast) and Prediction Error Variance of Differences (PEVD contrast),
-    and supports pedigree-based, genomic, and single-step relationship
-    structures through A-inverse, G-inverse, and H-inverse matrices, as well
+    and supports pedigree-based, genomic, and combined pedigree-genomic
+    relationship structures through A-inverse, G-inverse, and H-inverse matrices, as well
     as user-supplied inverse kernels. It also supports temporal restrictions
     and overlap summaries between management units.
 License: MIT + file LICENSE
@@ -32,3 +37,5 @@ Suggests:
     rmarkdown,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
+URL: https://github.com/alanmaxsp/connectedness
+BugReports: https://github.com/alanmaxsp/connectedness/issues
