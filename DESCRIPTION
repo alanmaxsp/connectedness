@@ -4,8 +4,8 @@ Title: Connectedness Metrics for Genetic Evaluation Across Management Units
 Version: 0.1.0
 Authors@R: person(
     given = "Alan",
-    family = "Pardo",
-    email = "pardo.alan@inta.gob.ar",
+    family = "Max",
+    email = "alanmaxsp@users.noreply.github.com",
     role = c("aut", "cre")
   )
 Description: Computes connectedness metrics between management units (MUs)
@@ -39,4 +39,3 @@ Suggests:
 VignetteBuilder: knitr
 URL: https://github.com/alanmaxsp/connectedness
 BugReports: https://github.com/alanmaxsp/connectedness/issues
-Config/testthat/edition: 3
