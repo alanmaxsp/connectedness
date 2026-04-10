@@ -326,8 +326,8 @@ compute_connectedness <- function(
   }
 
   rel_matrix <- Matrix::Matrix(rel_matrix, sparse = TRUE)
-  if (!inherits(rel_matrix, "CsparseMatrix")) {
-    rel_matrix <- methods::as(rel_matrix, "CsparseMatrix")
+  if (!inherits(rel_matrix, "dgCMatrix")) {
+    rel_matrix <- methods::as(methods::as(rel_matrix, "generalMatrix"), "dgCMatrix")
   }
   if (nrow(rel_matrix) != ncol(rel_matrix)) {
     stop("'rel_matrix' must be square.")
