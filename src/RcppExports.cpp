@@ -84,8 +84,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_Hinv_from_X
-List compute_Hinv_from_X(const Rcpp::IntegerVector& sire, const Rcpp::IntegerVector& dam, const Rcpp::IntegerVector& genotyped_idx, const Eigen::MatrixXi& X, double maf_threshold, int missing_code, double blend, int chunk_size, int n_threads, int tunedG, double tau, double omega, bool return_Ainv, bool return_F, bool return_A22, bool return_Ginv, bool return_allele_freqs);
-RcppExport SEXP _connectedness_compute_Hinv_from_X(SEXP sireSEXP, SEXP damSEXP, SEXP genotyped_idxSEXP, SEXP XSEXP, SEXP maf_thresholdSEXP, SEXP missing_codeSEXP, SEXP blendSEXP, SEXP chunk_sizeSEXP, SEXP n_threadsSEXP, SEXP tunedGSEXP, SEXP tauSEXP, SEXP omegaSEXP, SEXP return_AinvSEXP, SEXP return_FSEXP, SEXP return_A22SEXP, SEXP return_GinvSEXP, SEXP return_allele_freqsSEXP) {
+Rcpp::List compute_Hinv_from_X(const Rcpp::IntegerVector& sire, const Rcpp::IntegerVector& dam, const Rcpp::IntegerVector& genotyped_idx, const Eigen::MatrixXi& X, double maf_threshold, int missing_code, double blend, int chunk_size, int n_threads, int tunedG, double tau, double omega, bool return_Ainv, bool return_F, bool return_A22, bool return_Ginv, bool return_allele_freqs, bool verbose);
+RcppExport SEXP _connectedness_compute_Hinv_from_X(SEXP sireSEXP, SEXP damSEXP, SEXP genotyped_idxSEXP, SEXP XSEXP, SEXP maf_thresholdSEXP, SEXP missing_codeSEXP, SEXP blendSEXP, SEXP chunk_sizeSEXP, SEXP n_threadsSEXP, SEXP tunedGSEXP, SEXP tauSEXP, SEXP omegaSEXP, SEXP return_AinvSEXP, SEXP return_FSEXP, SEXP return_A22SEXP, SEXP return_GinvSEXP, SEXP return_allele_freqsSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -106,7 +106,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type return_A22(return_A22SEXP);
     Rcpp::traits::input_parameter< bool >::type return_Ginv(return_GinvSEXP);
     Rcpp::traits::input_parameter< bool >::type return_allele_freqs(return_allele_freqsSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_Hinv_from_X(sire, dam, genotyped_idx, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, tau, omega, return_Ainv, return_F, return_A22, return_Ginv, return_allele_freqs));
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_Hinv_from_X(sire, dam, genotyped_idx, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, tau, omega, return_Ainv, return_F, return_A22, return_Ginv, return_allele_freqs, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -134,8 +135,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_connectedness_build_Ainv_sparse_RA", (DL_FUNC) &_connectedness_build_Ainv_sparse_RA, 2},
     {"_connectedness_build_A22", (DL_FUNC) &_connectedness_build_A22, 4},
     {"_connectedness_compute_Ginv", (DL_FUNC) &_connectedness_compute_Ginv, 8},
-    {"_connectedness_compute_Hinv", (DL_FUNC) &_connectedness_compute_Hinv, 6},
-    {"_connectedness_compute_Hinv_from_X", (DL_FUNC) &_connectedness_compute_Hinv_from_X, 17},
+    {"_connectedness_compute_Hinv_from_X", (DL_FUNC) &_connectedness_compute_Hinv_from_X, 18},
     {"_connectedness_cd_contrast_mu_mme_sparse", (DL_FUNC) &_connectedness_cd_contrast_mu_mme_sparse, 8},
     {NULL, NULL, 0}
 };

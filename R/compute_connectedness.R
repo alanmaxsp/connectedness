@@ -309,7 +309,8 @@ compute_connectedness <- function(
       return_F             = FALSE,
       return_A22           = FALSE,
       return_Ginv          = FALSE,
-      return_allele_freqs  = FALSE
+      return_allele_freqs  = FALSE,
+      verbose              = verbose
     )
     rel_matrix <- Hinv_res$Hinv
 

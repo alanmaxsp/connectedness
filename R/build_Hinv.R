@@ -30,6 +30,7 @@
 #' @param return_A22 Logical; return `A22` in the output list.
 #' @param return_Ginv Logical; return `Ginv` in the output list.
 #' @param return_allele_freqs Logical; return retained SNP allele frequencies.
+#' @param verbose Logical; if `TRUE`, print progress messages from the C++ pipeline.
 #'
 #' @return A list containing `Hinv` and, optionally, intermediate matrices and
 #' diagnostics.
@@ -52,7 +53,8 @@ build_Hinv <- function(renum,
                        return_F            = FALSE,
                        return_A22          = FALSE,
                        return_Ginv         = FALSE,
-                       return_allele_freqs = FALSE) {
+                       return_allele_freqs = FALSE,
+                       verbose             = TRUE) {
 
   required_cols <- c("new_id", "new_sire", "new_dam")
   if (!all(required_cols %in% names(renum))) {
@@ -118,6 +120,7 @@ build_Hinv <- function(renum,
     return_A22,
     return_Ginv,
     return_allele_freqs,
+    verbose,
     PACKAGE = "connectedness"
   )
 }

@@ -800,6 +800,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
  //' @param return_A22 Return A22 in output list. Default FALSE.
  //' @param return_Ginv Return Ginv in output list. Default FALSE.
  //' @param return_allele_freqs Return allele frequencies in output list. Default FALSE.
+ //' @param verbose Print progress messages to console. Default TRUE.
  //' @return List containing Hinv and selected optional objects.
  //' @keywords internal
  //' @noRd
@@ -820,7 +821,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
                           bool   return_F           = false,
                           bool   return_A22         = false,
                           bool   return_Ginv        = false,
-                          bool   return_allele_freqs= false) {
+                          bool   return_allele_freqs= false,
+                          bool   verbose            = true) {
 
    const int N     = sire.size();
    const int n_gen = genotyped_idx.size();
@@ -834,23 +836,23 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
    if (X.cols() < 2)
      stop("X must have at least 2 SNP columns.");
 
-   Rcout << "Step 1/5: Building Ainv and computing F..." << std::endl;
+   if (verbose) Rcout << "Step 1/5: Building Ainv and computing F..." << std::endl;
    List Ares = build_Ainv_sparse_RA(sire, dam);
    SparseMatrix<double> Ainv = as<SparseMatrix<double>>(Ares["Ainv"]);
    NumericVector F           = Ares["F"];
 
-   Rcout << "Step 2/5: Building A22..." << std::endl;
+   if (verbose) Rcout << "Step 2/5: Building A22..." << std::endl;
    MatrixXd A22 = build_A22_eigen(sire, dam, genotyped_idx, F);
 
-   Rcout << "Step 3/5: Computing Ginv..." << std::endl;
+   if (verbose) Rcout << "Step 3/5: Computing Ginv..." << std::endl;
    GinvResultCpp Gres = compute_Ginv_cpp(X, maf_threshold, missing_code, blend,
                                          chunk_size, n_threads, tunedG, &A22);
 
-   Rcout << "Step 4/5: Computing Hinv..." << std::endl;
+   if (verbose) Rcout << "Step 4/5: Computing Hinv..." << std::endl;
    SparseMatrix<double> Hinv = compute_Hinv(Ainv, Gres.Ginv, A22, genotyped_idx,
                                             tau, omega);
 
-   Rcout << "Step 5/5: Assembling output..." << std::endl;
+   if (verbose) Rcout << "Step 5/5: Assembling output..." << std::endl;
    List out;
    out["Hinv"] = Hinv;
 
