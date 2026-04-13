@@ -6,9 +6,9 @@ management units (MUs) in animal genetic evaluations.
 The package focuses on **contrast-based connectedness metrics** derived from the
 mixed model equations (MME), and supports analyses based on:
 
-* **pedigree relationships** through (A^{-1}),
-* **genomic relationships** through (G^{-1}),
-* **combined pedigree-genomic relationships** through (H^{-1}), and
+* **pedigree relationships** through A^-1,
+* **genomic relationships** through G^-1,
+* **combined pedigree-genomic relationships** through H^-1, and
 * **custom inverse kernels** supplied by the user.
 
 ## What problem does it solve?
