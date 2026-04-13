@@ -353,7 +353,7 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
   MatrixXd A22 = MatrixXd::Zero(n_gen, n_gen);
   std::vector<double> q(N), u(N), a(N);
 
-  Rcout << "Building A22 (" << n_gen << " x " << n_gen
+  if (verbose) Rcout << "Building A22 (" << n_gen << " x " << n_gen
         << ") via Colleau algorithm (N = " << N << ")..." << std::endl;
 
   for (int jj = 0; jj < n_gen; ++jj) {
@@ -382,9 +382,9 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
       A22(ii, jj) = a[gidx[ii]];
 
     if ((jj + 1) % 500 == 0 || jj == n_gen - 1)
-      Rcout << "  " << (jj + 1) << " / " << n_gen << "\r" << std::flush;
+      if (verbose) Rcout << "  " << (jj + 1) << " / " << n_gen << "\r" << std::flush;
   }
-  Rcout << std::endl;
+  if (verbose) Rcout << std::endl;
 
   A22 = (A22 + A22.transpose()) * 0.5;
   return A22;
@@ -399,7 +399,7 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
                          const IntegerVector& dam,
                          const IntegerVector& genotyped_idx,
                          const NumericVector& F) {
-   MatrixXd A22 = build_A22_eigen(sire, dam, genotyped_idx, F);
+   MatrixXd A22 = build_A22_eigen(sire, dam, genotyped_idx, F, verbose);
 
    const int n_gen = A22.rows();
    NumericMatrix out(n_gen, n_gen);
@@ -435,7 +435,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
                                       int    chunk_size,
                                       int    n_threads,
                                       int    tunedG,
-                                      const MatrixXd* A22ptr) {
+                                      const MatrixXd* A22ptr,
+                                      bool   verbose = true) {
 
   const int n = X.rows();
   const int m = X.cols();
@@ -458,7 +459,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
   Eigen::setNbThreads(n_threads);
   Eigen::initParallel();
 
-  Rcout << "Computing allele frequencies (" << m << " SNPs, "
+  if (verbose) Rcout << "Computing allele frequencies (" << m << " SNPs, "
         << n << " animals)..." << std::endl;
 
   for (int j = 0; j < m; ++j) {
@@ -491,7 +492,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
                        : std::numeric_limits<double>::quiet_NaN();
   }
 
-  Rcout << "Filtering SNPs by MAF >= " << maf_threshold << "..." << std::endl;
+  if (verbose) Rcout << "Filtering SNPs by MAF >= " << maf_threshold << "..." << std::endl;
 
   std::vector<unsigned char> keep(m, 0);
 
@@ -515,7 +516,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
     if (m_valid < 2)
       stop("Fewer than 2 SNPs passed the MAF filter.");
 
-    Rcout << "Retained " << m_valid << " / " << m << " SNPs." << std::endl;
+    if (verbose) Rcout << "Retained " << m_valid << " / " << m << " SNPs." << std::endl;
 
     double denom = 0.0;
 #pragma omp parallel for reduction(+:denom) num_threads(n_threads) schedule(static)
@@ -528,8 +529,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
     if (denom <= 0.0 || !std::isfinite(denom))
       stop("Non-positive or non-finite denominator in G construction. Check SNP filtering.");
 
-    Rcout << "Denominator = " << denom << std::endl;
-    Rcout << "Building G matrix (chunks of " << chunk_size
+    if (verbose) Rcout << "Denominator = " << denom << std::endl;
+    if (verbose) Rcout << "Building G matrix (chunks of " << chunk_size
           << " SNPs, using BLAS dsyrk)..." << std::endl;
 
     const int n_chunks = (m_valid + chunk_size - 1) / chunk_size;
@@ -563,13 +564,13 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
       G.selfadjointView<Lower>().rankUpdate(Z);
 
       if ((chunk + 1) % 10 == 0 || chunk == n_chunks - 1)
-        Rcout << "  chunk " << (chunk + 1) << "/" << n_chunks << "\r" << std::flush;
+        if (verbose) Rcout << "  chunk " << (chunk + 1) << "/" << n_chunks << "\r" << std::flush;
     }
-    Rcout << std::endl;
+    if (verbose) Rcout << std::endl;
 
     G = G.selfadjointView<Lower>();
 
-    Rcout << "Normalizing and blending G..." << std::endl;
+    if (verbose) Rcout << "Normalizing and blending G..." << std::endl;
     G /= denom;
     G *= (1.0 - blend);
     G.diagonal().array() += blend;
@@ -580,14 +581,14 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 
     double tune_a = 0.0, tune_b = 1.0;
     if (tunedG != 0) {
-      Rcout << "Applying G tuning (tunedG = " << tunedG << ")..." << std::endl;
+      if (verbose) Rcout << "Applying G tuning (tunedG = " << tunedG << ")..." << std::endl;
       G = tune_G_affine_cpp(G, tunedG, A22ptr, tune_a, tune_b);
     }
 
     const double mean_diag_after    = mean_diag_cpp(G);
     const double mean_offdiag_after = mean_offdiag_cpp(G);
 
-    Rcout << "Cholesky factorization (LLT)..." << std::endl;
+    if (verbose) Rcout << "Cholesky factorization (LLT)..." << std::endl;
     LLT<MatrixXd> llt(G);
 
     if (llt.info() != Success) {
@@ -598,17 +599,17 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
       );
     }
 
-    Rcout << "Inverting via triangular solve..." << std::endl;
+    if (verbose) Rcout << "Inverting via triangular solve..." << std::endl;
     MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
     MatrixXd Ginv = Linv.transpose() * Linv;
     Ginv = (Ginv + Ginv.transpose()) * 0.5;
-    Rcout << "LLT successful." << std::endl;
+    if (verbose) Rcout << "LLT successful." << std::endl;
 
     NumericVector freqs(m_valid);
     for (int i = 0; i < m_valid; ++i)
       freqs(i) = p(valid_snps[i]);
 
-    Rcout << "Done (Ginv " << n << " x " << n << ")." << std::endl;
+    if (verbose) Rcout << "Done (Ginv " << n << " x " << n << ")." << std::endl;
 
     GinvResultCpp out;
     out.Ginv                = std::move(Ginv);
@@ -686,7 +687,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
      const Eigen::MatrixXd&             A22,
      const Rcpp::IntegerVector&         genotyped_idx,
      double tau   = 1.0,
-     double omega = 1.0) {
+     double omega = 1.0,
+     bool   verbose = true) {
 
    const int N     = Ainv.rows();
    const int n_gen = genotyped_idx.size();
@@ -718,7 +720,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
    MatrixXd A22sym  = (A22  + A22.transpose())  * 0.5;
    MatrixXd Ginvsym = (Ginv + Ginv.transpose()) * 0.5;
 
-   Rcout << "Inverting A22 (" << n_gen << " x " << n_gen << ")..." << std::endl;
+   if (verbose) Rcout << "Inverting A22 (" << n_gen << " x " << n_gen << ")..." << std::endl;
 
    MatrixXd A22inv;
    LLT<MatrixXd> llt_a22(A22sym);
@@ -726,22 +728,22 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
      MatrixXd Linv = llt_a22.matrixL().solve(MatrixXd::Identity(n_gen, n_gen));
      A22inv = Linv.transpose() * Linv;
      A22inv = (A22inv + A22inv.transpose()) * 0.5;
-     Rcout << "A22 LLT successful." << std::endl;
+     if (verbose) Rcout << "A22 LLT successful." << std::endl;
    } else {
-     Rcout << "A22 LLT failed. Trying LDLT..." << std::endl;
+     if (verbose) Rcout << "A22 LLT failed. Trying LDLT..." << std::endl;
      LDLT<MatrixXd> ldlt_a22(A22sym);
      if (ldlt_a22.info() != Success)
        stop("A22 is not positive definite. Check pedigree and genotyped_idx.");
      A22inv = ldlt_a22.solve(MatrixXd::Identity(n_gen, n_gen));
      A22inv = (A22inv + A22inv.transpose()) * 0.5;
-     Rcout << "A22 LDLT successful." << std::endl;
+     if (verbose) Rcout << "A22 LDLT successful." << std::endl;
    }
 
-   Rcout << "Computing D = tau * Ginv - omega * A22inv..." << std::endl;
+   if (verbose) Rcout << "Computing D = tau * Ginv - omega * A22inv..." << std::endl;
    MatrixXd D = tau * Ginvsym - omega * A22inv;
    D = (D + D.transpose()) * 0.5;
 
-   Rcout << "Scattering D onto Ainv (N = " << N
+   if (verbose) Rcout << "Scattering D onto Ainv (N = " << N
          << ", dense block = " << n_gen << " x " << n_gen << ")..." << std::endl;
 
    const size_t n_dense = static_cast<size_t>(n_gen) * n_gen;
@@ -764,7 +766,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
    Hinv.setFromTriplets(triplets.begin(), triplets.end());
    Hinv.makeCompressed();
 
-   Rcout << "H-inverse built."
+   if (verbose) Rcout << "H-inverse built."
          << "\n  Total nonzeros : " << Hinv.nonZeros()
          << "\n  From Ainv      : " << Ainv.nonZeros()
          << "\n  Dense block    : " << n_dense
@@ -842,15 +844,15 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
    NumericVector F           = Ares["F"];
 
    if (verbose) Rcout << "Step 2/5: Building A22..." << std::endl;
-   MatrixXd A22 = build_A22_eigen(sire, dam, genotyped_idx, F);
+   MatrixXd A22 = build_A22_eigen(sire, dam, genotyped_idx, F, verbose);
 
    if (verbose) Rcout << "Step 3/5: Computing Ginv..." << std::endl;
    GinvResultCpp Gres = compute_Ginv_cpp(X, maf_threshold, missing_code, blend,
-                                         chunk_size, n_threads, tunedG, &A22);
+                                         chunk_size, n_threads, tunedG, &A22, verbose);
 
    if (verbose) Rcout << "Step 4/5: Computing Hinv..." << std::endl;
    SparseMatrix<double> Hinv = compute_Hinv(Ainv, Gres.Ginv, A22, genotyped_idx,
-                                            tau, omega);
+                                            tau, omega, verbose);
 
    if (verbose) Rcout << "Step 5/5: Assembling output..." << std::endl;
    List out;
