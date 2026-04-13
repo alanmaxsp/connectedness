@@ -7,7 +7,7 @@
 #'
 #' The connectedness analysis can be based on a pedigree-derived inverse
 #' relationship matrix (`Ainv`), a genomic inverse relationship matrix (`Ginv`),
-#' a single-step inverse relationship matrix (`Hinv`), or a user-supplied
+#' a combined pedigree-genomic inverse relationship matrix (`Hinv`), or a user-supplied
 #' inverse kernel.
 #'
 #' @param data A data frame containing the records used to define the analysis.
@@ -49,7 +49,7 @@
 #' @param chunk_size Number of SNP columns processed per chunk when building
 #'   `G` internally.
 #' @param n_threads Number of OpenMP threads used in the compiled code.
-#' @param tunedG Integer tuning option for `G`. Use `0` for no tuning.
+#' @param tunedG Integer tuning option for `G`: `0` = no tuning; `1` = standardize by matching mean diagonal/off-diagonal contrast within `G`; `2` = affine tuning to match `A22` mean diagonal and off-diagonal; `3` = shift `G` by a constant so its global mean matches `A22`.
 #' @param tau Scaling factor multiplying `G^{-1}` in the construction of
 #'   `H^{-1}`.
 #' @param omega Scaling factor multiplying `A22^{-1}` in the construction of
@@ -309,7 +309,8 @@ compute_connectedness <- function(
       return_F             = FALSE,
       return_A22           = FALSE,
       return_Ginv          = FALSE,
-      return_allele_freqs  = FALSE
+      return_allele_freqs  = FALSE,
+      verbose              = verbose
     )
     rel_matrix <- Hinv_res$Hinv
 
@@ -325,8 +326,9 @@ compute_connectedness <- function(
     }
   }
 
+  rel_matrix <- Matrix::Matrix(rel_matrix, sparse = TRUE)
   if (!inherits(rel_matrix, "dgCMatrix")) {
-    rel_matrix <- methods::as(rel_matrix, "dgCMatrix")
+    rel_matrix <- methods::as(methods::as(rel_matrix, "generalMatrix"), "dgCMatrix")
   }
   if (nrow(rel_matrix) != ncol(rel_matrix)) {
     stop("'rel_matrix' must be square.")
