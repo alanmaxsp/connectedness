@@ -462,6 +462,15 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
   if (verbose) Rcout << "Computing allele frequencies (" << m << " SNPs, "
         << n << " animals)..." << std::endl;
 
+  for (int j = 0; j < m; ++j) {
+    for (int i = 0; i < n; ++i) {
+      int g = X(i, j);
+      if (g != missing_code && (g < 0 || g > 2)) {
+        stop("Unexpected genotype code at row %d, col %d: %d", i + 1, j + 1, g);
+      }
+    }
+  }
+
   VectorXd p(m);
   std::vector<int> obs_count(m, 0);
 
