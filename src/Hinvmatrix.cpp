@@ -395,10 +395,11 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
  //' @keywords internal
  //' @noRd
  // [[Rcpp::export]]
- NumericMatrix build_A22(const IntegerVector& sire,
-                         const IntegerVector& dam,
-                         const IntegerVector& genotyped_idx,
-                         const NumericVector& F) {
+NumericMatrix build_A22(const IntegerVector& sire,
+                        const IntegerVector& dam,
+                        const IntegerVector& genotyped_idx,
+                        const NumericVector& F,
+                        bool   verbose = true) {
    MatrixXd A22 = build_A22_eigen(sire, dam, genotyped_idx, F, verbose);
 
    const int n_gen = A22.rows();
@@ -599,9 +600,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
       );
     }
 
-    if (verbose) Rcout << "Inverting via triangular solve..." << std::endl;
-    MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
-    MatrixXd Ginv = Linv.transpose() * Linv;
+    if (verbose) Rcout << "Inverting via LLT solve..." << std::endl;
+    MatrixXd Ginv = llt.solve(MatrixXd::Identity(n, n));
     Ginv = (Ginv + Ginv.transpose()) * 0.5;
     if (verbose) Rcout << "LLT successful." << std::endl;
 
