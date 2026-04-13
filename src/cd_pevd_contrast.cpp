@@ -17,7 +17,7 @@ static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, doub
 //' \eqn{K^{-1}}. Therefore, it can be used with:
 //' \itemize{
 //'   \item \code{Ainv} for pedigree-based connectedness,
-//'   \item \code{Hinv} for single-step connectedness,
+//'   \item \code{Hinv} for connectedness under a combined pedigree-genomic kernel,
 //'   \item or any other compatible inverse kernel matrix.
 //' }
 //'
@@ -42,7 +42,8 @@ static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, doub
 //' @param sigma2e Residual variance.
 //' @param mu_names_nullable Optional character vector of MU names (length U).
 //' @return List with CD, PEVD, qK, qC matrices (U x U) and n_target_by_MU.
-//' @export
+//' @keywords internal
+//' @noRd
 // [[Rcpp::export]]
 Rcpp::List cd_contrast_mu_mme_sparse(
     const Eigen::SparseMatrix<double>& Kinv,
