@@ -600,9 +600,8 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
       );
     }
 
-    if (verbose) Rcout << "Inverting via triangular solve..." << std::endl;
-    MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
-    MatrixXd Ginv = Linv.transpose() * Linv;
+    if (verbose) Rcout << "Inverting via LLT solve..." << std::endl;
+    MatrixXd Ginv = llt.solve(MatrixXd::Identity(n, n));
     Ginv = (Ginv + Ginv.transpose()) * 0.5;
     if (verbose) Rcout << "LLT successful." << std::endl;
 
