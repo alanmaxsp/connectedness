@@ -7,8 +7,8 @@ The package focuses on **contrast-based connectedness metrics** derived from the
 mixed model equations (MME), and supports analyses based on:
 
 * **pedigree relationships** through $A^{-1}$,
-* **genomic relationships** through G^-1,
-* **combined pedigree-genomic relationships** through H^-1, and
+* **genomic relationships** through $G^{-1}$,
+* **combined pedigree-genomic relationships** through $H^{-1}$, and
 * **custom inverse kernels** supplied by the user.
 
 ## What problem does it solve?
@@ -50,7 +50,7 @@ tools on macOS, or a standard compiler toolchain on Linux).
 The following examples are schematic and illustrate the main arguments required
 by the package.
 
-### Pedigree-based connectedness ((A^{-1}))
+### Pedigree-based connectedness ($A^{-1}$)
 
 ```r
 library(connectedness)
@@ -86,7 +86,7 @@ res_A_scaled <- compute_connectedness(
 )
 ```
 
-### Genomic connectedness ((G^{-1}))
+### Genomic connectedness ($G^{-1}$)
 
 ```r
 res_G <- compute_connectedness(
@@ -102,7 +102,7 @@ res_G <- compute_connectedness(
 )
 ```
 
-### H-kernel connectedness ((H^{-1}))
+### H-kernel connectedness ($H^{-1}$)
 
 ```r
 res_H <- compute_connectedness(
