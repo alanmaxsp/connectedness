@@ -36,8 +36,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // build_A22
-NumericMatrix build_A22(const IntegerVector& sire, const IntegerVector& dam, const IntegerVector& genotyped_idx, const NumericVector& F);
-RcppExport SEXP _connectedness_build_A22(SEXP sireSEXP, SEXP damSEXP, SEXP genotyped_idxSEXP, SEXP FSEXP) {
+NumericMatrix build_A22(const IntegerVector& sire, const IntegerVector& dam, const IntegerVector& genotyped_idx, const NumericVector& F, bool verbose);
+RcppExport SEXP _connectedness_build_A22(SEXP sireSEXP, SEXP damSEXP, SEXP genotyped_idxSEXP, SEXP FSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -45,7 +45,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const IntegerVector& >::type dam(damSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type genotyped_idx(genotyped_idxSEXP);
     Rcpp::traits::input_parameter< const NumericVector& >::type F(FSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_A22(sire, dam, genotyped_idx, F));
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_A22(sire, dam, genotyped_idx, F, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -133,7 +134,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_connectedness_compute_F_ML92", (DL_FUNC) &_connectedness_compute_F_ML92, 2},
     {"_connectedness_build_Ainv_sparse_RA", (DL_FUNC) &_connectedness_build_Ainv_sparse_RA, 2},
-    {"_connectedness_build_A22", (DL_FUNC) &_connectedness_build_A22, 4},
+    {"_connectedness_build_A22", (DL_FUNC) &_connectedness_build_A22, 5},
     {"_connectedness_compute_Ginv", (DL_FUNC) &_connectedness_compute_Ginv, 8},
     {"_connectedness_compute_Hinv_from_X", (DL_FUNC) &_connectedness_compute_Hinv_from_X, 18},
     {"_connectedness_cd_contrast_mu_mme_sparse", (DL_FUNC) &_connectedness_cd_contrast_mu_mme_sparse, 8},

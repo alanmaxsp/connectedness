@@ -306,7 +306,8 @@ static inline MatrixXd tune_G_affine_cpp(const MatrixXd& G,
 static MatrixXd build_A22_eigen(const IntegerVector& sire,
                                 const IntegerVector& dam,
                                 const IntegerVector& genotyped_idx,
-                                const NumericVector& F) {
+                                const NumericVector& F,
+                                bool   verbose = true) {
 
   const int N     = sire.size();
   const int n_gen = genotyped_idx.size();
@@ -398,7 +399,8 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
  NumericMatrix build_A22(const IntegerVector& sire,
                          const IntegerVector& dam,
                          const IntegerVector& genotyped_idx,
-                         const NumericVector& F) {
+                         const NumericVector& F,
+                         bool   verbose = true) {
    MatrixXd A22 = build_A22_eigen(sire, dam, genotyped_idx, F, verbose);
 
    const int n_gen = A22.rows();
