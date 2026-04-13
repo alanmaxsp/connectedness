@@ -27,8 +27,8 @@ build_Ainv_sparse_RA <- function(sire, dam) {
     .Call(`_connectedness_build_Ainv_sparse_RA`, sire, dam)
 }
 
-build_A22 <- function(sire, dam, genotyped_idx, F) {
-    .Call(`_connectedness_build_A22`, sire, dam, genotyped_idx, F)
+build_A22 <- function(sire, dam, genotyped_idx, F, verbose = TRUE) {
+    .Call(`_connectedness_build_A22`, sire, dam, genotyped_idx, F, verbose)
 }
 
 compute_Ginv <- function(X, maf_threshold = 0.05, missing_code = 5L, blend = 0.05, chunk_size = 2000L, n_threads = 1L, tunedG = 0L, A22 = NULL) {
@@ -80,4 +80,3 @@ compute_Hinv_from_X <- function(sire, dam, genotyped_idx, X, maf_threshold = 0.0
 cd_contrast_mu_mme_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL) {
     .Call(`_connectedness_cd_contrast_mu_mme_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable)
 }
-
