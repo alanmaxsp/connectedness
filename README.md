@@ -178,5 +178,3 @@ precision and connectedness in mixed linear models of genetic evaluation.
 *Genetics Selection Evolution*, 28, 359–378.
 
 Yu, H., & Morota, G. (2021). GCA: An R package for genetic connectedness analysis using pedigree and genomic data. *BMC Genomics*, 22, 119.
-
-Legarra, A., Aguilar, I., & Misztal, I. (2009). A relationship matrix including full pedigree and genomic information. *Journal of Dairy Science*, 92(9), 4656–4663.
