@@ -406,8 +406,8 @@ genetic variance by setting <code>scale_pevd = TRUE</code> in
 <span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>)</span>
 <span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a></span>
 <span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="fu">print</span>(res)</span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="fu">plot.connectedness</span>(res, <span class="at">which =</span> <span class="st">&quot;CD&quot;</span>)</span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="fu">plot.connectedness</span>(res, <span class="at">which =</span> <span class="st">&quot;PEVD&quot;</span>)</span></code></pre></div>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="fu">plot</span>(res, <span class="at">which =</span> <span class="st">&quot;CD&quot;</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="fu">plot</span>(res, <span class="at">which =</span> <span class="st">&quot;PEVD&quot;</span>)</span></code></pre></div>
 <p>That is the shortest mental model of the package:</p>
 <ol style="list-style-type: decimal">
 <li>provide the animals, MUs, and fixed-effect structure,</li>
@@ -656,7 +656,7 @@ window and report where MU pairs actually overlap in time.</p>
 <span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  <span class="at">min_records_per_year =</span> <span class="dv">1</span></span>
 <span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>)</span>
 <span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="fu">plot.connectedness</span>(res_time, <span class="at">which =</span> <span class="st">&quot;overlap&quot;</span>)</span></code></pre></div>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="fu">plot</span>(res_time, <span class="at">which =</span> <span class="st">&quot;overlap&quot;</span>)</span></code></pre></div>
 <p>This is a useful extension of the contrast logic: connectedness is
 not only a function of pedigree or genomics, but also of <strong>which
 units are effectively represented in the same time horizon</strong>.</p>
@@ -665,9 +665,9 @@ units are effectively represented in the same time horizon</strong>.</p>
 <h2>Visualization</h2>
 <p>The package provides a direct plotting method for a first visual
 inspection.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">plot.connectedness</span>(res_strong, <span class="at">which =</span> <span class="st">&quot;CD&quot;</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">plot.connectedness</span>(res_strong, <span class="at">which =</span> <span class="st">&quot;PEVD&quot;</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="fu">plot.connectedness</span>(res_strong, <span class="at">which =</span> <span class="st">&quot;all&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">plot</span>(res_strong, <span class="at">which =</span> <span class="st">&quot;CD&quot;</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">plot</span>(res_strong, <span class="at">which =</span> <span class="st">&quot;PEVD&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="fu">plot</span>(res_strong, <span class="at">which =</span> <span class="st">&quot;all&quot;</span>)</span></code></pre></div>
 <p>A quick visual check is often the easiest way to identify MU pairs
 that are well connected, weakly connected, or effectively isolated.</p>
 </div>

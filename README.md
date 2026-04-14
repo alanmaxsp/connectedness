@@ -118,7 +118,7 @@ You can inspect or visualize results with:
 
 ```r
 print(res_A)
-plot.connectedness(res_A, which = "all")
+plot(res_A, which = "all")
 ```
 
 ## Optional temporal restriction
@@ -140,7 +140,7 @@ res_time <- compute_connectedness(
   min_records_per_year = 10
 )
 
-plot.connectedness(res_time, which = "overlap")
+plot(res_time, which = "overlap")
 ```
 
 ## Main functions
