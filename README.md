@@ -3,37 +3,21 @@
 `connectedness` is an R package for computing genetic connectedness between
 management units (MUs) in animal genetic evaluations.
 
-The package focuses on **contrast-based connectedness metrics** derived from the
-mixed model equations (MME), and supports analyses based on:
+It implements **contrast-based connectedness metrics** from the mixed model equations (MME) and supports analyses based on:
 
-* **pedigree relationships** through $A^{-1}$,
-* **genomic relationships** through $G^{-1}$,
-* **combined pedigree-genomic relationships** through $H^{-1}$, and
-* **custom inverse kernels** supplied by the user.
+* pedigree relationships through **A⁻¹**
+* genomic relationships through **G⁻¹**
+* combined pedigree-genomic relationships through **H⁻¹**
+* user-supplied inverse kernels
 
-## What problem does it solve?
+## What does it compute?
 
-In animal breeding, animals are often compared across herds, flocks, regions, countries, or other management units. However, those comparisons are not equally
-reliable in all data sets. When management units are weakly linked genetically,
-contrasts between units become less accurate, and comparisons of breeding values
-across units are less informative.
+The package currently provides two pairwise connectedness metrics between management units:
 
-`connectedness` quantifies pairwise connectedness between management units using
-the same relationship structure assumed in the analysis, allowing users to
-assess how strongly units are genetically linked under pedigree-based, genomic,
-or combined pedigree-genomic settings.
+* **CD contrast**: Coefficient of Determination of contrasts between MUs
+* **PEVD contrast**: Prediction Error Variance of Differences between MUs
 
-## Metrics
-
-The package currently reports two core contrast-based metrics:
-
-* **CD contrast**: Coefficient of Determination of contrasts between
-  management units. Higher values indicate stronger connectedness.
-* **PEVD contrast**: Prediction Error Variance of Differences for the same
-  contrasts. Lower values indicate stronger connectedness.
-
-Both metrics are computed under the **contrast approach** from the mixed model
-equations, following Laloë (1993) and Laloë et al. (1996).
+Higher CD and lower PEVD indicate stronger connectedness.
 
 ## Installation
 
@@ -42,15 +26,31 @@ equations, following Laloë (1993) and Laloë et al. (1996).
 remotes::install_github("alanmaxsp/connectedness")
 ```
 
-A working C++ toolchain is required (`Rtools` on Windows, Xcode command line
-tools on macOS, or a standard compiler toolchain on Linux).
+A working C++ toolchain is required:
 
-## Quick start
+* **Windows**: Rtools
+* **macOS**: Xcode command line tools
+* **Linux**: standard compiler toolchain
 
-The following examples are schematic and illustrate the main arguments required
-by the package.
+## Before you start
 
-### Pedigree-based connectedness ($A^{-1}$)
+To run `compute_connectedness()`, your data should include:
+
+* an animal identifier column
+* a management-unit column (`mu_col`)
+* all fixed-effect variables used in `fixed_formula`
+
+Depending on the relationship structure, you will also need:
+
+* **Ainv**: a pedigree with animal, sire, and dam
+* **Ginv**: a genotype matrix `X` and an `animal_index`
+* **Hinv**: a pedigree, a genotype matrix `X`, and `genotyped_idx`
+
+Each animal must belong to **one and only one** management unit.
+
+## Minimal examples
+
+### Pedigree-based connectedness (Ainv)
 
 ```r
 library(connectedness)
@@ -58,74 +58,47 @@ library(connectedness)
 res_A <- compute_connectedness(
   data          = my_data,
   animal_col    = "animal_id",
-  mu_col        = "region",
-  fixed_formula = ~ 1 + sex + birth_year,
-  sigma2a       = 5.66,
-  sigma2e       = 10.24,
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
   relationship  = "Ainv",
   pedigree      = my_pedigree
 )
-
-print(res_A)
-plot.connectedness(res_A, which = "all")
 ```
 
-If you want `PEVD / sigma2a` instead of unscaled `PEVD`, use:
-
-```r
-res_A_scaled <- compute_connectedness(
-  data          = my_data,
-  animal_col    = "animal_id",
-  mu_col        = "region",
-  fixed_formula = ~ 1 + sex + birth_year,
-  sigma2a       = 5.66,
-  sigma2e       = 10.24,
-  relationship  = "Ainv",
-  pedigree      = my_pedigree,
-  scale_pevd    = TRUE
-)
-```
-
-### Genomic connectedness ($G^{-1}$)
+### Genomic connectedness (Ginv)
 
 ```r
 res_G <- compute_connectedness(
   data          = my_genotyped_data,
   animal_col    = "animal_id",
-  mu_col        = "region",
-  fixed_formula = ~ 1 + sex,
-  sigma2a       = 5.66,
-  sigma2e       = 10.24,
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
   relationship  = "Ginv",
   X             = my_genotypes_matrix,
   animal_index  = my_index
 )
 ```
 
-### H-kernel connectedness ($H^{-1}$)
+### Combined pedigree-genomic connectedness (Hinv)
 
 ```r
 res_H <- compute_connectedness(
   data          = my_data,
   animal_col    = "animal_id",
-  mu_col        = "region",
-  fixed_formula = ~ 1 + sex,
-  sigma2a       = 5.66,
-  sigma2e       = 10.24,
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
   relationship  = "Hinv",
   pedigree      = my_pedigree,
   X             = my_genotypes_matrix,
   genotyped_idx = my_genotyped_idx
 )
 ```
-
-## Main functions
-
-* `compute_connectedness()`
-* `build_Ainv()`
-* `build_Ginv()`
-* `build_Hinv()`
-
 ## Output
 
 `compute_connectedness()` returns an object of class `"connectedness"` with
@@ -139,21 +112,25 @@ components such as:
 * `relationship`: relationship structure used in the analysis (`"Ainv"`,
   `"Ginv"`, `"Hinv"`, or custom).
 
-## Temporal overlap
+You can inspect or visualize results with:
 
-The package can optionally restrict analyses to a common time window and report
-which MU pairs overlap across years. This is useful when genetic links between
-management units vary over time and connectedness needs to be evaluated within a
-restricted temporal window.
+```r
+print(res_A)
+plot.connectedness(res_A, which = "all")
+```
+
+## Optional temporal restriction
+
+Connectedness can also be evaluated within a restricted time window:
 
 ```r
 res_time <- compute_connectedness(
   data                 = my_data,
   animal_col           = "animal_id",
-  mu_col               = "region",
-  fixed_formula        = ~ 1 + sex,
-  sigma2a              = 5.66,
-  sigma2e              = 10.24,
+  mu_col               = "herd",
+  fixed_formula        = ~ 1 + herd + sex,
+  sigma2a              = 2.0,
+  sigma2e              = 5.0,
   relationship         = "Ainv",
   pedigree             = my_pedigree,
   year_col             = "birth_year",
@@ -163,6 +140,13 @@ res_time <- compute_connectedness(
 
 plot.connectedness(res_time, which = "overlap")
 ```
+
+## Main functions
+
+* `compute_connectedness()`
+* `build_Ainv()`
+* `build_Ginv()`
+* `build_Hinv()`
 
 ## References
 
