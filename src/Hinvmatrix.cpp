@@ -1,11 +1,4 @@
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-attributes"
-#endif
 #include <RcppEigen.h>
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -607,8 +600,9 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
       );
     }
 
-    if (verbose) Rcout << "Inverting via LLT solve..." << std::endl;
-    MatrixXd Ginv = llt.solve(MatrixXd::Identity(n, n));
+    if (verbose) Rcout << "Inverting via triangular solve..." << std::endl;
+    MatrixXd Linv = llt.matrixL().solve(MatrixXd::Identity(n, n));
+    MatrixXd Ginv = Linv.transpose() * Linv;
     Ginv = (Ginv + Ginv.transpose()) * 0.5;
     if (verbose) Rcout << "LLT successful." << std::endl;
 
@@ -729,13 +723,14 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 
    if (verbose) Rcout << "Inverting A22 (" << n_gen << " x " << n_gen << ")..." << std::endl;
 
-  MatrixXd A22inv;
-  LLT<MatrixXd> llt_a22(A22sym);
-  if (llt_a22.info() == Success) {
-    A22inv = llt_a22.solve(MatrixXd::Identity(n_gen, n_gen));
-    A22inv = (A22inv + A22inv.transpose()) * 0.5;
-    if (verbose) Rcout << "A22 LLT successful." << std::endl;
-  } else {
+   MatrixXd A22inv;
+   LLT<MatrixXd> llt_a22(A22sym);
+   if (llt_a22.info() == Success) {
+     MatrixXd Linv = llt_a22.matrixL().solve(MatrixXd::Identity(n_gen, n_gen));
+     A22inv = Linv.transpose() * Linv;
+     A22inv = (A22inv + A22inv.transpose()) * 0.5;
+     if (verbose) Rcout << "A22 LLT successful." << std::endl;
+   } else {
      if (verbose) Rcout << "A22 LLT failed. Trying LDLT..." << std::endl;
      LDLT<MatrixXd> ldlt_a22(A22sym);
      if (ldlt_a22.info() != Success)
