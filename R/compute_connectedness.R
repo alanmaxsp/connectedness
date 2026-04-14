@@ -455,7 +455,7 @@ compute_connectedness <- function(
   )
 
   if (verbose) message("Done.")
-  out
+  invisible(out)
 }
 
 .compute_overlap <- function(data_window, mu_col, year_col, min_records_per_year) {
