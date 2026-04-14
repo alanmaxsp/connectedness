@@ -32,6 +32,8 @@ A working C++ toolchain is required:
 * **macOS**: Xcode command line tools
 * **Linux**: standard compiler toolchain
 
+For a longer introduction with worked examples, see the [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html).
+
 ## Before you start
 
 To run `compute_connectedness()`, your data should include:
