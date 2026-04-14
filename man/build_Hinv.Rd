@@ -20,7 +20,8 @@ build_Hinv(
   return_F = FALSE,
   return_A22 = FALSE,
   return_Ginv = FALSE,
-  return_allele_freqs = FALSE
+  return_allele_freqs = FALSE,
+  verbose = TRUE
 )
 }
 \arguments{
@@ -43,7 +44,7 @@ Missing genotypes must be coded with \code{missing_code}.}
 
 \item{n_threads}{Number of OpenMP threads.}
 
-\item{tunedG}{Integer tuning option for \eqn{G}. Use 0 for no tuning.}
+\item{tunedG}{Integer tuning option for \eqn{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \eqn{G}; \code{2} = affine tuning to match \eqn{A_{22}} mean diagonal and off-diagonal; \code{3} = shift \eqn{G} by a constant so its global mean matches \eqn{A_{22}}.}
 
 \item{tau}{Scaling factor multiplying \eqn{G^{-1}} in the final expression.}
 
@@ -58,6 +59,8 @@ Missing genotypes must be coded with \code{missing_code}.}
 \item{return_Ginv}{Logical; return \code{Ginv} in the output list.}
 
 \item{return_allele_freqs}{Logical; return retained SNP allele frequencies.}
+
+\item{verbose}{Logical; if \code{TRUE}, print progress messages from the C++ pipeline.}
 }
 \value{
 A list containing \code{Hinv} and, optionally, intermediate matrices and

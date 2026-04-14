@@ -89,7 +89,7 @@ it can be derived internally.}
 
 \item{n_threads}{Number of OpenMP threads used in the compiled code.}
 
-\item{tunedG}{Integer tuning option for \code{G}. Use \code{0} for no tuning.}
+\item{tunedG}{Integer tuning option for \code{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \code{G}; \code{2} = affine tuning to match \code{A22} mean diagonal and off-diagonal; \code{3} = shift \code{G} by a constant so its global mean matches \code{A22}.}
 
 \item{tau}{Scaling factor multiplying \code{G^{-1}} in the construction of
 \code{H^{-1}}.}
