@@ -2,7 +2,7 @@
 % Please edit documentation in R/methods.R
 \name{plot.connectedness}
 \alias{plot.connectedness}
-\title{Plot a connectedness object}
+\title{Plot method for connectedness objects}
 \usage{
 \method{plot}{connectedness}(
   x,
@@ -24,7 +24,7 @@
 
 \item{triangle}{Which part of the matrix to display: \code{"full"}, \code{"upper"}, or \code{"lower"}.}
 
-\item{...}{Unused.}
+\item{...}{Additional arguments passed to methods.}
 }
 \value{
 The input object, invisibly.

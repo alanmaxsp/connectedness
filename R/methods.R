@@ -60,7 +60,7 @@ print.connectedness <- function(x, digits = 3, ...) {
 }
 
 
-#' Plot a connectedness object
+#' Plot method for connectedness objects
 #'
 #' Draws heatmaps of `CD` or `PEVD`, and optionally a temporal overlap plot.
 #'
@@ -69,9 +69,10 @@ print.connectedness <- function(x, digits = 3, ...) {
 #' @param show_values Logical; if `TRUE`, print values inside the heatmap cells.
 #' @param digits Number of decimal places shown inside cells.
 #' @param triangle Which part of the matrix to display: `"full"`, `"upper"`, or `"lower"`.
-#' @param ... Unused.
+#' @param ... Additional arguments passed to methods.
 #'
 #' @return The input object, invisibly.
+#' @method plot connectedness
 #' @export
 plot.connectedness <- function(x,
                                which = c("CD", "PEVD", "overlap", "all"),
