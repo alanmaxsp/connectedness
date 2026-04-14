@@ -1,6 +1,8 @@
-﻿src/*.o
+src/*.o
 src/*.so
 src/*.dll
 src/*.dylib
 .Rproj.user
 .Rhistory
+/doc/
+/Meta/

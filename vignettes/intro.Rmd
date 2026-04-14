@@ -130,15 +130,14 @@ If `scale_pevd = TRUE`, the `PEVD` matrix is returned on the scale
 
 ## Example
 
-A good introductory vignette should let the user see the package react to a
-simple and meaningful change in connectedness. The example below contrasts two
-small pedigree scenarios:
+The example below contrasts two small pedigree scenarios:
 
 - a **weakly connected** setting, where the two MUs are linked only weakly,
 - a **more connected** setting, where a sire is shared across MUs.
 
-The goal is not biological realism, but to show immediately that the metrics
-move in the expected direction.
+The goal is not biological realism, but to illustrate how the package responds
+to a simple change in pedigree structure and why `PEVD` and `CD` do not always
+move in the same direction.
 
 ### Scenario 1: weaker connectedness
 
@@ -199,21 +198,31 @@ res_strong <- compute_connectedness(
 ```{r eval=FALSE}
 res_weak$CD
 res_weak$PEVD
+res_weak$qK
 
 res_strong$CD
 res_strong$PEVD
+res_strong$qK
 ```
 
-The expected pattern is straightforward:
+The weak-versus-strong comparison is informative, but the two metrics do not
+need to move in parallel.
 
-- the **more connected** scenario should tend to show **higher CD**,
-- and **lower PEVD**,
-- although the exact numerical behavior depends on the full contrast structure
-  and the implied genetic denominator.
+In this toy example, the stronger pedigree link (a shared sire across MUs)
+reduces `PEVD`, from 33.33 in the weak scenario to 20 in the strong scenario.
+This reflects a more precisely estimated contrast between the two management
+units.
 
-This is the kind of first experience a new user needs: a small example where it
-is obvious that the package is responding to the pedigree structure rather than
-producing opaque numbers.
+At the same time, the stronger link also reduces the kernel-based denominator
+of the contrast (`qK`), from 1 in the weak scenario to 0.5 in the strong
+scenario. In other words, the two MUs become more connected, but also less
+genetically distinct. Because `CD` is interpreted relative to that denominator,
+it can decrease even when `PEVD` decreases.
+
+So, in this example, stronger connectedness improves precision of the contrast
+(lower `PEVD`), but also reduces the expected genetic variability underlying
+that contrast (lower `qK`), which leads to a lower `CD`.
+
 
 ### Optional PEVD scaling
 
@@ -335,16 +344,3 @@ plot.connectedness(res_strong, which = "all")
 
 A quick visual check is often the easiest way to identify MU pairs that are
 well connected, weakly connected, or effectively isolated.
-
-## References
-
-Kennedy, B. W., & Trus, D. (1993). Considerations on genetic connectedness
-between management units under an animal model. *Journal of Animal Science*,
-71, 2341–2352. fileciteturn55file0
-
-Laloë, D. (1993). Precision and information in linear models of genetic
-evaluation. *Genetics Selection Evolution*, 25, 557–576.
-
-Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures of
-precision and connectedness in mixed linear models of genetic evaluation.
-*Genetics Selection Evolution*, 28, 359–378.
