@@ -3,3 +3,4 @@ src/*.so
 src/*.dll
 src/*.dylib
 .Rproj.user
+.Rhistory

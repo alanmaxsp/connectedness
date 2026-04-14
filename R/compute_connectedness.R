@@ -277,7 +277,8 @@ compute_connectedness <- function(
       chunk_size    = chunk_size,
       n_threads     = n_threads,
       tunedG        = tunedG,
-      A22           = NULL
+      A22           = NULL,
+	  verbose       = verbose
     )
     rel_matrix <- Matrix::Matrix(Ginv_res$Ginv, sparse = TRUE)
 

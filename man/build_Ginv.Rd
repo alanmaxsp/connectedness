@@ -12,7 +12,8 @@ build_Ginv(
   chunk_size = 2000L,
   n_threads = 1L,
   tunedG = 0L,
-  A22 = NULL
+  A22 = NULL,
+  verbose = TRUE
 )
 }
 \arguments{

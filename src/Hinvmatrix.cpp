@@ -646,7 +646,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
                    int    chunk_size    = 2000,
                    int    n_threads     = 1,
                    int    tunedG        = 0,
-                   Rcpp::Nullable<Rcpp::NumericMatrix> A22 = R_NilValue) {
+                   Rcpp::Nullable<Rcpp::NumericMatrix> A22 = R_NilValue, bool verbose = true) {
 
    MatrixXd A22mat;
    MatrixXd* A22ptr = nullptr;
@@ -660,7 +660,7 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
    }
 
    GinvResultCpp res = compute_Ginv_cpp(X, maf_threshold, missing_code, blend,
-                                        chunk_size, n_threads, tunedG, A22ptr);
+                                        chunk_size, n_threads, tunedG, A22ptr, verbose);
 
    return List::create(
      _["Ginv"]                = res.Ginv,

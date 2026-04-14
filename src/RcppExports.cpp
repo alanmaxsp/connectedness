@@ -51,8 +51,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_Ginv
-List compute_Ginv(const Eigen::MatrixXi& X, double maf_threshold, int missing_code, double blend, int chunk_size, int n_threads, int tunedG, Rcpp::Nullable<Rcpp::NumericMatrix> A22);
-RcppExport SEXP _connectedness_compute_Ginv(SEXP XSEXP, SEXP maf_thresholdSEXP, SEXP missing_codeSEXP, SEXP blendSEXP, SEXP chunk_sizeSEXP, SEXP n_threadsSEXP, SEXP tunedGSEXP, SEXP A22SEXP) {
+List compute_Ginv(const Eigen::MatrixXi& X, double maf_threshold, int missing_code, double blend, int chunk_size, int n_threads, int tunedG, Rcpp::Nullable<Rcpp::NumericMatrix> A22, bool verbose);
+RcppExport SEXP _connectedness_compute_Ginv(SEXP XSEXP, SEXP maf_thresholdSEXP, SEXP missing_codeSEXP, SEXP blendSEXP, SEXP chunk_sizeSEXP, SEXP n_threadsSEXP, SEXP tunedGSEXP, SEXP A22SEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -64,7 +64,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
     Rcpp::traits::input_parameter< int >::type tunedG(tunedGSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericMatrix> >::type A22(A22SEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_Ginv(X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, A22));
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_Ginv(X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, A22, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -136,7 +137,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_connectedness_compute_F_ML92", (DL_FUNC) &_connectedness_compute_F_ML92, 2},
     {"_connectedness_build_Ainv_sparse_RA", (DL_FUNC) &_connectedness_build_Ainv_sparse_RA, 2},
     {"_connectedness_build_A22", (DL_FUNC) &_connectedness_build_A22, 5},
-    {"_connectedness_compute_Ginv", (DL_FUNC) &_connectedness_compute_Ginv, 8},
+    {"_connectedness_compute_Ginv", (DL_FUNC) &_connectedness_compute_Ginv, 9},
     {"_connectedness_compute_Hinv", (DL_FUNC) &_connectedness_compute_Hinv, 7},
     {"_connectedness_compute_Hinv_from_X", (DL_FUNC) &_connectedness_compute_Hinv_from_X, 18},
     {"_connectedness_cd_contrast_mu_mme_sparse", (DL_FUNC) &_connectedness_cd_contrast_mu_mme_sparse, 8},

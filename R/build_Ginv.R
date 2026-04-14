@@ -34,7 +34,8 @@ build_Ginv <- function(X,
                        chunk_size    = 2000L,
                        n_threads     = 1L,
                        tunedG        = 0L,
-                       A22           = NULL) {
+                       A22           = NULL,
+					   verbose       = TRUE) {
 
   if (!is.matrix(X)) {
     X <- as.matrix(X)
@@ -77,6 +78,7 @@ build_Ginv <- function(X,
     as.integer(n_threads),
     as.integer(tunedG),
     A22,
+	verbose,
     PACKAGE = "connectedness"
   )
 }

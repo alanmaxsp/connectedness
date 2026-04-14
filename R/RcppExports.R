@@ -31,8 +31,8 @@ build_A22 <- function(sire, dam, genotyped_idx, F, verbose = TRUE) {
     .Call(`_connectedness_build_A22`, sire, dam, genotyped_idx, F, verbose)
 }
 
-compute_Ginv <- function(X, maf_threshold = 0.05, missing_code = 5L, blend = 0.05, chunk_size = 2000L, n_threads = 1L, tunedG = 0L, A22 = NULL) {
-    .Call(`_connectedness_compute_Ginv`, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, A22)
+compute_Ginv <- function(X, maf_threshold = 0.05, missing_code = 5L, blend = 0.05, chunk_size = 2000L, n_threads = 1L, tunedG = 0L, A22 = NULL, verbose = TRUE) {
+    .Call(`_connectedness_compute_Ginv`, X, maf_threshold, missing_code, blend, chunk_size, n_threads, tunedG, A22, verbose)
 }
 
 compute_Hinv <- function(Ainv, Ginv, A22, genotyped_idx, tau = 1.0, omega = 1.0, verbose = TRUE) {
