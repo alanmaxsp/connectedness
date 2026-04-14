@@ -28,7 +28,8 @@ Missing genotypes must be coded with \code{missing_code}.}
 
 \item{chunk_size}{Number of SNP columns processed per chunk.}
 
-\item{n_threads}{Number of OpenMP threads.}
+\item{n_threads}{Number of OpenMP threads used by the compiled backend
+during genomic matrix construction and related parallel steps.}
 
 \item{tunedG}{Integer tuning option for \eqn{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \eqn{G}; \code{2} = affine tuning to match \eqn{A_{22}} mean diagonal and off-diagonal; \code{3} = shift \eqn{G} by a constant so its global mean matches \eqn{A_{22}}.}
 

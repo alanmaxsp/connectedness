@@ -87,7 +87,10 @@ it can be derived internally.}
 \item{chunk_size}{Number of SNP columns processed per chunk when building
 \code{G} internally.}
 
-\item{n_threads}{Number of OpenMP threads used in the compiled code.}
+\item{n_threads}{Number of OpenMP threads used in the genomic computations
+of the compiled backend. Currently, this argument affects \code{Ginv} and the
+genomic substeps of \code{Hinv}, but it is ignored for purely pedigree-based
+\code{Ainv} analyses and is not propagated to the final CD/PEVD MME solver.}
 
 \item{tunedG}{Integer tuning option for \code{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \code{G}; \code{2} = affine tuning to match \code{A22} mean diagonal and off-diagonal; \code{3} = shift \code{G} by a constant so its global mean matches \code{A22}.}
 

@@ -10,7 +10,8 @@
 #' @param missing_code Integer code representing missing genotypes.
 #' @param blend Blending factor applied to \eqn{G} before optional tuning.
 #' @param chunk_size Number of SNP columns processed per chunk.
-#' @param n_threads Number of OpenMP threads.
+#' @param n_threads Number of OpenMP threads used by the compiled backend
+#'   during genomic matrix construction and related parallel steps.
 #' @param tunedG Integer tuning option for \eqn{G}: `0` = no tuning; `1` = standardize by matching mean diagonal/off-diagonal contrast within \eqn{G}; `2` = affine tuning to match \eqn{A_{22}} mean diagonal and off-diagonal; `3` = shift \eqn{G} by a constant so its global mean matches \eqn{A_{22}}.
 #' @param A22 Optional dense pedigree-based relationship matrix for the same
 #'   genotyped animals and in the same order as the rows of `X`. Required when

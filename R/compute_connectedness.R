@@ -48,7 +48,10 @@
 #' @param blend Blending factor applied to `G` before optional tuning.
 #' @param chunk_size Number of SNP columns processed per chunk when building
 #'   `G` internally.
-#' @param n_threads Number of OpenMP threads used in the compiled code.
+#' @param n_threads Number of OpenMP threads used in the genomic computations
+#'   of the compiled backend. Currently, this argument affects `Ginv` and the
+#'   genomic substeps of `Hinv`, but it is ignored for purely pedigree-based
+#'   `Ainv` analyses and is not propagated to the final CD/PEVD MME solver.
 #' @param tunedG Integer tuning option for `G`: `0` = no tuning; `1` = standardize by matching mean diagonal/off-diagonal contrast within `G`; `2` = affine tuning to match `A22` mean diagonal and off-diagonal; `3` = shift `G` by a constant so its global mean matches `A22`.
 #' @param tau Scaling factor multiplying `G^{-1}` in the construction of
 #'   `H^{-1}`.
