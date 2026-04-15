@@ -90,11 +90,6 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   std::vector<double> nk(U, 0.0);
   for (int k = 0; k < U; ++k) nk[k] = (double)idx[k].size();
 
-  // B (N x U)
-  MatrixXd B = MatrixXd::Zero(N, U);
-  for (int k = 0; k < U; ++k)
-    for (int a : idx[k]) B(a, k) = 1.0;
-
   // D = diag(Z'Z), where Z is incidence for animal effect
   VectorXd D = VectorXd::Zero(N);
   for (int r = 0; r < nrec; ++r) {
@@ -167,20 +162,10 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   MME.setFromTriplets(tr_M.begin(), tr_M.end());
   MME.makeCompressed();
 
-  // Solve MME for [ *, W_K B ]
-  MatrixXd RHS = MatrixXd::Zero(M, U);
-  RHS.block(p, 0, N, U) = B;
-
   Eigen::SimplicialLDLT<SparseMatrix<double>> solverMME;
   solverMME.compute(MME);
   if (solverMME.info() != Eigen::Success)
     Rcpp::stop("Sparse factorization of MME failed. Check collinearity in X or definiteness of the system.");
-
-  MatrixXd SOL = solverMME.solve(RHS);
-  if (solverMME.info() != Eigen::Success)
-    Rcpp::stop("MME solve failed.");
-
-  MatrixXd WKB = SOL.block(p, 0, N, U);
 
   // Solve K * B indirectly from Kinv * Y = B
   Eigen::SimplicialLDLT<SparseMatrix<double>> solverKinv;
@@ -188,26 +173,47 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   if (solverKinv.info() != Eigen::Success)
     Rcpp::stop("Sparse factorization of Kinv failed.");
 
-  MatrixXd Y_K = solverKinv.solve(B);
-  if (solverKinv.info() != Eigen::Success)
-    Rcpp::stop("Solve with Kinv failed.");
-
   // Aggregate by MU
   MatrixXd G_den = MatrixXd::Zero(U, U);
   MatrixXd G_num = MatrixXd::Zero(U, U);
 
-  for (int i = 0; i < U; ++i) {
-    const auto& ii = idx[i];
-    if (ii.empty()) continue;
+  // Solve by MU blocks to reduce peak memory while preserving exactness.
+  // Each block corresponds to selected columns of B (indicator columns by MU).
+  const int block_cols = std::max(1, std::min(32, U));
+  for (int j0 = 0; j0 < U; j0 += block_cols) {
+    const int bs = std::min(block_cols, U - j0);
 
-    for (int j = 0; j < U; ++j) {
-      double sden = 0.0, snum = 0.0;
-      for (int a : ii) {
-        sden += Y_K(a, j);
-        snum += WKB(a, j);
+    MatrixXd B_blk = MatrixXd::Zero(N, bs);
+    for (int k = 0; k < bs; ++k) {
+      const int mu_j = j0 + k;
+      for (int a : idx[mu_j]) B_blk(a, k) = 1.0;
+    }
+
+    MatrixXd RHS_blk = MatrixXd::Zero(M, bs);
+    RHS_blk.block(p, 0, N, bs) = B_blk;
+
+    MatrixXd SOL_blk = solverMME.solve(RHS_blk);
+    if (solverMME.info() != Eigen::Success)
+      Rcpp::stop("MME solve failed.");
+    MatrixXd WKB_blk = SOL_blk.block(p, 0, N, bs);
+
+    MatrixXd YK_blk = solverKinv.solve(B_blk);
+    if (solverKinv.info() != Eigen::Success)
+      Rcpp::stop("Solve with Kinv failed.");
+
+    for (int i = 0; i < U; ++i) {
+      const auto& ii = idx[i];
+      if (ii.empty()) continue;
+
+      for (int k = 0; k < bs; ++k) {
+        double sden = 0.0, snum = 0.0;
+        for (int a : ii) {
+          sden += YK_blk(a, k);
+          snum += WKB_blk(a, k);
+        }
+        G_den(i, j0 + k) = sden;
+        G_num(i, j0 + k) = snum;
       }
-      G_den(i, j) = sden;
-      G_num(i, j) = snum;
     }
   }
 
