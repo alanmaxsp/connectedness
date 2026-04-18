@@ -5,6 +5,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using Eigen::SparseMatrix;
 using Eigen::Triplet;
+using Eigen::LDLT;
 
 static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, double v) {
   if (v != 0.0) tr.emplace_back(i, j, v);
@@ -167,11 +168,27 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   if (solverMME.info() != Eigen::Success)
     Rcpp::stop("Sparse factorization of MME failed. Check collinearity in X or definiteness of the system.");
 
-  // Solve K * B indirectly from Kinv * Y = B
-  Eigen::SimplicialLDLT<SparseMatrix<double>> solverKinv;
-  solverKinv.compute(Kinv);
-  if (solverKinv.info() != Eigen::Success)
-    Rcpp::stop("Sparse factorization of Kinv failed.");
+  // Solve K * B indirectly from Kinv * Y = B.
+  // Kinv may be effectively dense (e.g. Ginv) or mixed sparse/dense (e.g. Hinv),
+  // so choose a solver strategy based on observed sparsity.
+  const double kinv_density =
+    static_cast<double>(Kinv.nonZeros()) /
+    static_cast<double>(static_cast<long double>(N) * static_cast<long double>(N));
+  const bool use_dense_kinv_solver = (kinv_density > 0.20 && N <= 25000);
+
+  Eigen::SimplicialLDLT<SparseMatrix<double>> solverKinv_sparse;
+  LDLT<MatrixXd> solverKinv_dense;
+
+  if (use_dense_kinv_solver) {
+    MatrixXd Kinv_dense = MatrixXd(Kinv);
+    solverKinv_dense.compute(Kinv_dense);
+    if (solverKinv_dense.info() != Eigen::Success)
+      Rcpp::stop("Dense factorization of Kinv failed.");
+  } else {
+    solverKinv_sparse.compute(Kinv);
+    if (solverKinv_sparse.info() != Eigen::Success)
+      Rcpp::stop("Sparse factorization of Kinv failed.");
+  }
 
   // Aggregate by MU
   MatrixXd G_den = MatrixXd::Zero(U, U);
@@ -179,7 +196,15 @@ Rcpp::List cd_contrast_mu_mme_sparse(
 
   // Solve by MU blocks to reduce peak memory while preserving exactness.
   // Each block corresponds to selected columns of B (indicator columns by MU).
-  const int block_cols = std::max(1, std::min(32, U));
+  // Heuristic block size based on temporary dense memory footprint.
+  // Per block we hold roughly: B_blk(N), RHS_blk(M), SOL_blk(M), WKB_blk(N), YK_blk(N)
+  // => (3N + 2M) * bs doubles.
+  const long long target_tmp_bytes = 256LL * 1024LL * 1024LL; // 256 MB
+  const long long bytes_per_col = static_cast<long long>(3LL * N + 2LL * M) * static_cast<long long>(sizeof(double));
+  const int max_cols_by_mem = (bytes_per_col > 0)
+    ? static_cast<int>(std::max(1LL, target_tmp_bytes / bytes_per_col))
+    : 1;
+  const int block_cols = std::max(1, std::min(U, std::min(32, max_cols_by_mem)));
   for (int j0 = 0; j0 < U; j0 += block_cols) {
     const int bs = std::min(block_cols, U - j0);
 
@@ -197,9 +222,16 @@ Rcpp::List cd_contrast_mu_mme_sparse(
       Rcpp::stop("MME solve failed.");
     MatrixXd WKB_blk = SOL_blk.block(p, 0, N, bs);
 
-    MatrixXd YK_blk = solverKinv.solve(B_blk);
-    if (solverKinv.info() != Eigen::Success)
-      Rcpp::stop("Solve with Kinv failed.");
+    MatrixXd YK_blk;
+    if (use_dense_kinv_solver) {
+      YK_blk = solverKinv_dense.solve(B_blk);
+      if (solverKinv_dense.info() != Eigen::Success)
+        Rcpp::stop("Dense solve with Kinv failed.");
+    } else {
+      YK_blk = solverKinv_sparse.solve(B_blk);
+      if (solverKinv_sparse.info() != Eigen::Success)
+        Rcpp::stop("Sparse solve with Kinv failed.");
+    }
 
     for (int i = 0; i < U; ++i) {
       const auto& ii = idx[i];
