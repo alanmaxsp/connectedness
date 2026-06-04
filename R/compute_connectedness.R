@@ -467,6 +467,7 @@ compute_connectedness <- function(
     sigma2a,
     sigma2e,
     as.character(mu_levels),
+    verbose,
     PACKAGE = "connectedness"
   )
 
