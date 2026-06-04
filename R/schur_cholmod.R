@@ -1,7 +1,27 @@
-.cd_force_symmetric_sparse <- function(x) {
+.cd_force_symmetric_sparse <- function(x, label = "Kinv", tol = 1e-8) {
+  if (inherits(x, "symmetricMatrix")) {
+    return(methods::as(x, "dsCMatrix"))
+  }
+
   x <- .as_dgCMatrix(x)
+  asym <- Matrix::drop0(x - t(x))
+  max_abs_x <- if (length(x@x)) max(abs(x@x)) else 0
+  max_abs_asym <- if (length(asym@x)) max(abs(asym@x)) else 0
+  scale <- max(1, max_abs_x)
+
+  if (max_abs_asym > tol * scale) {
+    stop(sprintf(
+      paste0(
+        "%s must be symmetric. If you supplied only one triangle of a custom ",
+        "sparse matrix, pass it as forceSymmetric(Kinv, uplo = 'L' or 'U') ",
+        "before calling compute_connectedness()."
+      ),
+      label
+    ), call. = FALSE)
+  }
+
   x <- Matrix::drop0((x + t(x)) * 0.5)
-  Matrix::forceSymmetric(x, uplo = "L")
+  methods::as(Matrix::forceSymmetric(x, uplo = "L"), "dsCMatrix")
 }
 
 .cd_cholesky <- function(x, label) {
@@ -68,7 +88,7 @@
 
   D <- tabulate(id_rec, nbins = N)
 
-  Kinv_sym <- .cd_force_symmetric_sparse(Kinv)
+  Kinv_sym <- .cd_force_symmetric_sparse(Kinv, label = "Kinv")
   Cuu_sym <- Matrix::drop0(lambda * Kinv_sym + Matrix::Diagonal(n = N, x = as.numeric(D)))
   Cuu_sym <- Matrix::forceSymmetric(Cuu_sym, uplo = "L")
 

@@ -183,3 +183,51 @@ test_that("Schur auto selects dense for dense custom relationship", {
   expect_equal(diag$matrix_storage, "dense")
   expect_equal(diag$selected_schur_solver, "dense")
 })
+
+test_that("Schur dense solver reproduces full MME for non-diagonal dense custom relationship", {
+  data <- data.frame(
+    animal_id = c("A", "B", "C", "D", "E", "F"),
+    region    = c("MU1", "MU1", "MU2", "MU2", "MU3", "MU3"),
+    sex       = c("F", "M", "F", "M", "F", "M"),
+    stringsAsFactors = FALSE
+  )
+
+  set.seed(123)
+  M <- matrix(rnorm(36), 6, 6)
+  Kinv <- crossprod(M) + diag(6) * 2
+  animal_index <- setNames(seq_len(6), data$animal_id)
+
+  res_full <- compute_connectedness(
+    data = data,
+    animal_col = "animal_id",
+    mu_col = "region",
+    fixed_formula = ~ 1 + sex,
+    sigma2a = 1.2,
+    sigma2e = 2.4,
+    relationship = "custom",
+    rel_matrix = Kinv,
+    animal_index = animal_index,
+    mme_backend = "full_mme",
+    verbose = FALSE
+  )
+
+  res_dense <- compute_connectedness(
+    data = data,
+    animal_col = "animal_id",
+    mu_col = "region",
+    fixed_formula = ~ 1 + sex,
+    sigma2a = 1.2,
+    sigma2e = 2.4,
+    relationship = "custom",
+    rel_matrix = Kinv,
+    animal_index = animal_index,
+    mme_backend = "schur",
+    schur_solver = "dense",
+    verbose = FALSE
+  )
+
+  expect_equal(res_dense$CD, res_full$CD, tolerance = 1e-8)
+  expect_equal(res_dense$PEVD, res_full$PEVD, tolerance = 1e-8)
+  expect_equal(res_dense$qC, res_full$qC, tolerance = 1e-8)
+  expect_equal(res_dense$qK, res_full$qK, tolerance = 1e-8)
+})

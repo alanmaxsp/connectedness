@@ -668,7 +668,8 @@ compute_connectedness <- function(
 .choose_schur_solver <- function(rel_matrix,
                                  relationship,
                                  schur_solver = "auto",
-                                 dense_density_threshold = 0.20) {
+                                 dense_density_threshold = 0.20,
+                                 min_n_for_dense_switch = 1000L) {
   if (schur_solver != "auto") return(schur_solver)
 
   is_sparse <- .is_sparse_matrix(rel_matrix)
@@ -682,8 +683,10 @@ compute_connectedness <- function(
   density <- nnz / (as.numeric(N) * as.numeric(N))
 
   if (relationship %in% c("Hinv", "custom")) {
-    if (density <= dense_density_threshold) return("cholmod")
-    return("dense")
+    if (N >= min_n_for_dense_switch && density > dense_density_threshold) {
+      return("dense")
+    }
+    return("cholmod")
   }
 
   "dense"
