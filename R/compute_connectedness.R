@@ -40,8 +40,9 @@
 #'   to row/column indices in the inverse relationship matrix actually used in
 #'   the analysis. Required for `relationship = "custom"`; optional otherwise if
 #'   it can be derived internally.
-#' @param rel_matrix Optional user-supplied inverse relationship matrix of class
-#'   `dgCMatrix`. Used only when `relationship = "custom"`.
+#' @param rel_matrix Optional user-supplied inverse relationship matrix. Sparse
+#'   Matrix objects are kept sparse; dense matrices are kept dense for Schur
+#'   solver selection when `relationship = "custom"`.
 #' @param maf_threshold Minor allele frequency threshold used when building
 #'   `Ginv` or `Hinv` internally.
 #' @param missing_code Integer code used to identify missing genotypes in `X`.
@@ -67,6 +68,25 @@
 #' @param min_records_per_year Integer giving the minimum number of records per
 #'   MU-year combination for a year to be considered valid when computing
 #'   temporal overlap. Only used when `year_window` is not `NULL`.
+#' @param dry_run Logical. If `TRUE`, return problem-size diagnostics before the
+#'   final MME solve instead of computing connectedness metrics.
+#' @param max_mme_dim Positive integer or `Inf`. Maximum allowed dimension of
+#'   the full MME system (`nrow(rel_matrix) + ncol(fixed_effects)`) before the
+#'   final sparse direct solve is attempted. Set to `Inf` to disable this safety
+#'   check. This safety check is applied only when `mme_backend = "full_mme"`.
+#' @param mme_backend Character string indicating the numerical backend used for
+#'   the MME solve. `"full_mme"` builds and factorizes the full MME system.
+#'   `"schur"` factorizes the animal block and absorbs fixed effects through a
+#'   Schur complement. The two backends are algebraically equivalent up to
+#'   floating-point roundoff.
+#' @param schur_solver Character string indicating the numerical solver used
+#'   when `mme_backend = "schur"`. Options are `"auto"`, `"cholmod"`,
+#'   `"dense"`, and `"eigen_sparse"`. `"cholmod"` uses CHOLMOD through the
+#'   Matrix package for sparse kernels; `"dense"` uses a dense compiled solver;
+#'   `"eigen_sparse"` keeps the Eigen sparse solver for diagnostics and small
+#'   comparisons.
+#' @param schur_block_size Positive integer. Number of MU right-hand-side
+#'   columns solved per block in the Schur backend.
 #' @param verbose Logical. If `TRUE`, progress messages are printed.
 #'
 #' @return An object of class `"connectedness"`, which is a list with:
@@ -80,11 +100,17 @@
 #'   \item{n_target}{Named numeric vector. Number of target animals per MU.}
 #'   \item{relationship}{Character string indicating the inverse relationship
 #'     matrix used in the analysis.}
+#'   \item{mme_backend}{Character string indicating the numerical backend used
+#'     for the MME solve.}
+#'   \item{schur_solver}{Character string indicating the selected Schur solver,
+#'     or `NA` when `mme_backend = "full_mme"`.}
 #'   \item{year_window}{The time window used, or `NULL` if no filtering was applied.}
 #'   \item{overlap}{A data frame describing temporal overlap between MU pairs,
 #'     or `NULL` if no temporal filtering was requested.}
 #'   \item{call}{The matched function call.}
 #' }
+#' If `dry_run = TRUE`, the function returns a diagnostics list instead of a
+#' connectedness result.
 #'
 #' @details
 #' For each pair of management units \eqn{(i, j)}, the contrast assigns weight
@@ -100,6 +126,17 @@
 #' When a time window is specified, the function also reports the years in which
 #' MU pairs overlap according to the observed records and the chosen minimum
 #' record threshold.
+#'
+#' The `"full_mme"` backend directly factorizes the full MME matrix
+#' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
+#' factorization by factorizing `Cuu = Z'Z + lambda Kinv` and using the fixed-
+#' effect Schur complement `S = X'X - X'Z Cuu^{-1} Z'X`.
+#'
+#' The Schur formulation is algebraically independent of the relationship matrix
+#' type. With `schur_solver = "auto"`, sparse inverse kernels such as `Ainv` are
+#' solved through CHOLMOD via the Matrix package, while dense kernels such as
+#' `Ginv` are solved through a dense compiled backend. The `"eigen_sparse"`
+#' solver is retained mainly for diagnostics and small-scale comparisons.
 #'
 #' @seealso [renum_pedigree()], [build_Ainv()], [build_Ginv()], [build_Hinv()],
 #'   [print.connectedness()], [plot.connectedness()]
@@ -172,11 +209,18 @@ compute_connectedness <- function(
     year_col             = NULL,
     year_window          = NULL,
     min_records_per_year = 10,
+    dry_run              = FALSE,
+    max_mme_dim          = 500000L,
+    mme_backend          = c("full_mme", "schur"),
+    schur_solver         = c("auto", "cholmod", "dense", "eigen_sparse"),
+    schur_block_size     = 16L,
     verbose              = TRUE
 ) {
 
   cl <- match.call()
   relationship <- match.arg(relationship)
+  mme_backend <- match.arg(mme_backend)
+  schur_solver <- match.arg(schur_solver)
 
   if (!is.data.frame(data)) {
     stop("'data' must be a data frame.")
@@ -204,6 +248,19 @@ compute_connectedness <- function(
       min_records_per_year != as.integer(min_records_per_year)) {
     stop("'min_records_per_year' must be a single positive integer.")
   }
+  if (!is.logical(dry_run) || length(dry_run) != 1L || is.na(dry_run)) {
+    stop("'dry_run' must be TRUE or FALSE.")
+  }
+  if ((!is.numeric(max_mme_dim) && !is.integer(max_mme_dim)) || length(max_mme_dim) != 1L ||
+      is.na(max_mme_dim) || max_mme_dim <= 0) {
+    stop("'max_mme_dim' must be a single positive number or Inf.")
+  }
+  if ((!is.numeric(schur_block_size) && !is.integer(schur_block_size)) ||
+      length(schur_block_size) != 1L || is.na(schur_block_size) ||
+      schur_block_size < 1 || schur_block_size != as.integer(schur_block_size)) {
+    stop("'schur_block_size' must be a single positive integer.")
+  }
+  schur_block_size <- as.integer(schur_block_size)
 
   if (!is.null(year_window)) {
     if (is.null(year_col)) {
@@ -283,7 +340,7 @@ compute_connectedness <- function(
       A22           = NULL,
 	  verbose       = verbose
     )
-    rel_matrix <- Matrix::Matrix(Ginv_res$Ginv, sparse = TRUE)
+    rel_matrix <- Ginv_res$Ginv
 
   } else if (relationship == "Hinv") {
     if (is.null(X)) {
@@ -330,10 +387,7 @@ compute_connectedness <- function(
     }
   }
 
-  rel_matrix <- Matrix::Matrix(rel_matrix, sparse = TRUE)
-  if (!inherits(rel_matrix, "dgCMatrix")) {
-    rel_matrix <- methods::as(methods::as(rel_matrix, "generalMatrix"), "dgCMatrix")
-  }
+  rel_matrix <- .normalize_rel_matrix(rel_matrix, relationship)
   if (nrow(rel_matrix) != ncol(rel_matrix)) {
     stop("'rel_matrix' must be square.")
   }
@@ -416,23 +470,128 @@ compute_connectedness <- function(
   }
   Xsp <- Matrix::sparse.model.matrix(fixed_formula, data = data_window)
 
+  selected_schur_solver <- .choose_schur_solver(
+    rel_matrix = rel_matrix,
+    relationship = relationship,
+    schur_solver = schur_solver
+  )
+
+  diagnostics <- .connectedness_diagnostics(
+    relationship = relationship,
+    rel_matrix = rel_matrix,
+    fixed_matrix = Xsp,
+    data_window = data_window,
+    mu_levels = mu_levels,
+    target = target,
+    year_window = year_window,
+    scale_pevd = scale_pevd,
+    mme_backend = mme_backend,
+    schur_solver = schur_solver,
+    selected_schur_solver = selected_schur_solver,
+    max_mme_dim = max_mme_dim,
+    call = cl
+  )
+
+  if (dry_run) {
+    if (verbose) .print_connectedness_diagnostics(diagnostics)
+    return(invisible(diagnostics))
+  }
+
+  if (mme_backend == "full_mme") {
+    .check_connectedness_problem_size(diagnostics, max_mme_dim)
+  }
+
   id_rec <- as.integer(data_window$.new_id)
 
-  if (verbose) {
-    message(sprintf("Computing CD and PEVD via MME using %s...", relationship))
+  if (mme_backend == "full_mme") {
+    if (verbose) {
+      message(sprintf(
+        "Computing CD and PEVD via full MME using %s relationship...",
+        relationship
+      ))
+    }
+    rel_matrix_sparse <- .as_dgCMatrix(rel_matrix)
+    res_cpp <- .Call(
+      `_connectedness_cd_contrast_mu_mme_sparse`,
+      rel_matrix_sparse,
+      id_rec,
+      Xsp,
+      as.integer(mu_animal),
+      target,
+      sigma2a,
+      sigma2e,
+      as.character(mu_levels),
+      verbose,
+      PACKAGE = "connectedness"
+    )
+  } else if (mme_backend == "schur") {
+    if (verbose) {
+      message(sprintf(
+        "Computing CD and PEVD via Schur backend using %s solver...",
+        selected_schur_solver
+      ))
+    }
+
+    if (selected_schur_solver == "cholmod") {
+      res_cpp <- .cd_contrast_mu_schur_cholmod_R(
+        Kinv = rel_matrix,
+        id_rec = id_rec,
+        Xsp = Xsp,
+        mu_animal = as.integer(mu_animal),
+        target = target,
+        sigma2a = sigma2a,
+        sigma2e = sigma2e,
+        mu_names = as.character(mu_levels),
+        block_size = schur_block_size,
+        verbose = verbose
+      )
+    } else if (selected_schur_solver == "dense") {
+      dense_gb <- diagnostics$dense_matrix_gb
+      if (is.finite(dense_gb) && dense_gb > 32 && verbose) {
+        warning(sprintf(
+          "Dense Schur solver selected. Dense Kinv storage alone is approximately %.1f GB.",
+          dense_gb
+        ), call. = FALSE)
+      }
+      Kinv_dense <- if (.is_sparse_matrix(rel_matrix)) as.matrix(rel_matrix) else as.matrix(rel_matrix)
+      storage.mode(Kinv_dense) <- "double"
+      res_cpp <- .Call(
+        `_connectedness_cd_contrast_mu_schur_dense`,
+        Kinv_dense,
+        id_rec,
+        Xsp,
+        as.integer(mu_animal),
+        target,
+        sigma2a,
+        sigma2e,
+        as.character(mu_levels),
+        schur_block_size,
+        verbose,
+        PACKAGE = "connectedness"
+      )
+    } else if (selected_schur_solver == "eigen_sparse") {
+      if (!.is_sparse_matrix(rel_matrix)) {
+        stop("schur_solver = 'eigen_sparse' requires a sparse relationship matrix.")
+      }
+      res_cpp <- .Call(
+        `_connectedness_cd_contrast_mu_mme_schur_sparse`,
+        .as_dgCMatrix(rel_matrix),
+        id_rec,
+        Xsp,
+        as.integer(mu_animal),
+        target,
+        sigma2a,
+        sigma2e,
+        as.character(mu_levels),
+        verbose,
+        PACKAGE = "connectedness"
+      )
+    } else {
+      stop("Unknown Schur solver.")
+    }
+  } else {
+    stop("Unsupported 'mme_backend'.")
   }
-  res_cpp <- .Call(
-    `_connectedness_cd_contrast_mu_mme_sparse`,
-    rel_matrix,
-    id_rec,
-    Xsp,
-    as.integer(mu_animal),
-    target,
-    sigma2a,
-    sigma2e,
-    as.character(mu_levels),
-    PACKAGE = "connectedness"
-  )
 
   pevd_out <- res_cpp$PEVD
   if (scale_pevd) {
@@ -446,8 +605,10 @@ compute_connectedness <- function(
       qK           = res_cpp$qK,
       qC           = res_cpp$qC,
       n_target     = res_cpp$n_target_by_MU,
-      relationship = relationship,
-      year_window  = year_window,
+      relationship  = relationship,
+      mme_backend   = mme_backend,
+      schur_solver  = if (mme_backend == "schur") selected_schur_solver else NA_character_,
+      year_window   = year_window,
       overlap      = overlap_dt,
       call         = cl
     ),
@@ -456,6 +617,209 @@ compute_connectedness <- function(
 
   if (verbose) message("Done.")
   invisible(out)
+}
+
+
+
+.is_sparse_matrix <- function(x) {
+  inherits(x, "sparseMatrix")
+}
+
+.as_dgCMatrix <- function(x) {
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Package 'Matrix' is required.")
+  }
+  if (!.is_sparse_matrix(x)) {
+    x <- Matrix::Matrix(x, sparse = TRUE)
+  }
+  if (!inherits(x, "dgCMatrix")) {
+    x <- methods::as(methods::as(x, "generalMatrix"), "dgCMatrix")
+  }
+  x
+}
+
+.normalize_rel_matrix <- function(rel_matrix, relationship) {
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Package 'Matrix' is required.")
+  }
+
+  if (relationship == "Ginv") {
+    if (.is_sparse_matrix(rel_matrix)) return(.as_dgCMatrix(rel_matrix))
+    return(as.matrix(rel_matrix))
+  }
+
+  if (relationship == "Ainv") {
+    return(.as_dgCMatrix(rel_matrix))
+  }
+
+  if (relationship == "Hinv") {
+    if (.is_sparse_matrix(rel_matrix)) return(.as_dgCMatrix(rel_matrix))
+    return(as.matrix(rel_matrix))
+  }
+
+  if (relationship == "custom") {
+    if (.is_sparse_matrix(rel_matrix)) return(.as_dgCMatrix(rel_matrix))
+    return(as.matrix(rel_matrix))
+  }
+
+  stop("Unsupported relationship.")
+}
+
+.choose_schur_solver <- function(rel_matrix,
+                                 relationship,
+                                 schur_solver = "auto",
+                                 dense_density_threshold = 0.20,
+                                 min_n_for_dense_switch = 1000L) {
+  if (schur_solver != "auto") return(schur_solver)
+
+  is_sparse <- .is_sparse_matrix(rel_matrix)
+  N <- nrow(rel_matrix)
+
+  if (!is_sparse) return("dense")
+  if (relationship == "Ainv") return("cholmod")
+  if (relationship == "Ginv") return("dense")
+
+  nnz <- Matrix::nnzero(rel_matrix)
+  density <- nnz / (as.numeric(N) * as.numeric(N))
+
+  if (relationship %in% c("Hinv", "custom")) {
+    if (N >= min_n_for_dense_switch && density > dense_density_threshold) {
+      return("dense")
+    }
+    return("cholmod")
+  }
+
+  "dense"
+}
+
+.connectedness_diagnostics <- function(relationship,
+                                       rel_matrix,
+                                       fixed_matrix,
+                                       data_window,
+                                       mu_levels,
+                                       target,
+                                       year_window,
+                                       scale_pevd,
+                                       mme_backend,
+                                       schur_solver,
+                                       selected_schur_solver,
+                                       max_mme_dim,
+                                       call) {
+
+  rel_n <- nrow(rel_matrix)
+  matrix_storage <- if (.is_sparse_matrix(rel_matrix)) "sparse" else "dense"
+  rel_nnz <- if (.is_sparse_matrix(rel_matrix)) {
+    Matrix::nnzero(rel_matrix)
+  } else {
+    as.numeric(nrow(rel_matrix)) * as.numeric(ncol(rel_matrix))
+  }
+  x_nnz <- Matrix::nnzero(fixed_matrix)
+  p <- ncol(fixed_matrix)
+  mme_dim <- rel_n + p
+  n_records <- nrow(data_window)
+  n_target <- sum(target)
+  n_mu <- length(mu_levels)
+  rel_density <- rel_nnz / (as.numeric(rel_n) * as.numeric(rel_n))
+
+  # This is only the explicit sparse MME storage footprint before symbolic
+  # factorization. Sparse direct factorization can require substantially more
+  # memory depending on fill-in, so this is a lower-bound diagnostic.
+  explicit_mme_nnz_lower_bound <- rel_nnz + 2 * x_nnz + p
+  explicit_mme_storage_mb_lower_bound <-
+    explicit_mme_nnz_lower_bound * (8 + 4) / 1024^2
+  dense_matrix_gb <- as.numeric(rel_n) * as.numeric(rel_n) * 8 / 1024^3
+  schur_W_storage_mb <- as.numeric(rel_n) * as.numeric(p) * 8 / 1024^2
+  schur_S_storage_mb <- as.numeric(p) * as.numeric(p) * 8 / 1024^2
+  schur_W_storage_gb <- schur_W_storage_mb / 1024
+  schur_S_storage_gb <- schur_S_storage_mb / 1024
+  recommended_backend <- if (is.finite(max_mme_dim) && mme_dim > max_mme_dim) {
+    "schur"
+  } else {
+    "full_mme_or_schur"
+  }
+
+  structure(
+    list(
+      relationship = relationship,
+      matrix_storage = matrix_storage,
+      n_relationship = rel_n,
+      n_records = n_records,
+      n_target = n_target,
+      n_management_units = n_mu,
+      n_fixed_effect_columns = p,
+      mme_dim = mme_dim,
+      relationship_nonzeros = rel_nnz,
+      relationship_density = rel_density,
+      dense_matrix_gb = dense_matrix_gb,
+      fixed_effect_nonzeros = x_nnz,
+      explicit_mme_nonzeros_lower_bound = explicit_mme_nnz_lower_bound,
+      explicit_mme_storage_mb_lower_bound = explicit_mme_storage_mb_lower_bound,
+      schur_W_storage_mb = schur_W_storage_mb,
+      schur_S_storage_mb = schur_S_storage_mb,
+      schur_W_storage_gb = schur_W_storage_gb,
+      schur_S_storage_gb = schur_S_storage_gb,
+      recommended_backend = recommended_backend,
+      requested_backend = mme_backend,
+      requested_schur_solver = schur_solver,
+      selected_schur_solver = selected_schur_solver,
+      schur_solver_recommended = .choose_schur_solver(
+        rel_matrix = rel_matrix,
+        relationship = relationship,
+        schur_solver = "auto"
+      ),
+      year_window = year_window,
+      scale_pevd = scale_pevd,
+      call = call
+    ),
+    class = "connectedness_diagnostics"
+  )
+}
+
+.check_connectedness_problem_size <- function(diagnostics, max_mme_dim) {
+
+  if (is.finite(max_mme_dim) && diagnostics$mme_dim > max_mme_dim) {
+    stop(sprintf(
+      paste0(
+        "The connectedness MME system is too large for the default safe solve limit: ",
+        "dimension p + N = %d exceeds max_mme_dim = %d. ",
+        "Run compute_connectedness(..., dry_run = TRUE) to inspect problem-size diagnostics. ",
+        "Then reduce the analysis scope, provide a smaller user-defined relationship matrix, ",
+        "or set max_mme_dim = Inf to attempt the solve at your own risk."
+      ),
+      diagnostics$mme_dim,
+      as.integer(max_mme_dim)
+    ))
+  }
+
+  invisible(TRUE)
+}
+
+.print_connectedness_diagnostics <- function(x) {
+  message("Connectedness dry-run diagnostics:")
+  message(sprintf("  relationship              : %s", x$relationship))
+  message(sprintf("  matrix storage            : %s", x$matrix_storage))
+  message(sprintf("  relationship dimension    : %d", x$n_relationship))
+  message(sprintf("  records                   : %d", x$n_records))
+  message(sprintf("  target animals            : %d", x$n_target))
+  message(sprintf("  management units          : %d", x$n_management_units))
+  message(sprintf("  fixed-effect columns      : %d", x$n_fixed_effect_columns))
+  message(sprintf("  MME dimension (p + N)     : %d", x$mme_dim))
+  message(sprintf("  relationship nonzeros     : %d", x$relationship_nonzeros))
+  message(sprintf("  relationship density      : %.6g", x$relationship_density))
+  message(sprintf("  dense equivalent size     : %.2f GB", x$dense_matrix_gb))
+  message(sprintf("  fixed-effect nonzeros     : %d", x$fixed_effect_nonzeros))
+  message(sprintf(
+    "  explicit MME storage lower bound: %.1f MB",
+    x$explicit_mme_storage_mb_lower_bound
+  ))
+  message(sprintf("  Schur W storage           : %.1f MB (%.2f GB)", x$schur_W_storage_mb, x$schur_W_storage_gb))
+  message(sprintf("  Schur S storage           : %.1f MB (%.2f GB)", x$schur_S_storage_mb, x$schur_S_storage_gb))
+  message(sprintf("  requested backend         : %s", x$requested_backend))
+  message(sprintf("  recommended backend       : %s", x$recommended_backend))
+  message(sprintf("  requested Schur solver    : %s", x$requested_schur_solver))
+  message(sprintf("  selected Schur solver     : %s", x$selected_schur_solver))
+  message(sprintf("  recommended Schur solver  : %s", x$schur_solver_recommended))
+  invisible(x)
 }
 
 .compute_overlap <- function(data_window, mu_col, year_col, min_records_per_year) {
