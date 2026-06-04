@@ -146,6 +146,30 @@ comparisons.}
 \item{schur_block_size}{Positive integer. Number of MU right-hand-side columns
 solved per block in the Schur backend.}
 
+\item{dry_run}{Logical. If \code{TRUE}, return problem-size diagnostics before the
+final MME solve instead of computing connectedness metrics.}
+
+\item{max_mme_dim}{Positive integer or \code{Inf}. Maximum allowed dimension of
+the full MME system (\code{nrow(rel_matrix) + ncol(fixed_effects)}) before the
+final sparse direct solve is attempted. Set to \code{Inf} to disable this safety
+check. This safety check is applied only when \code{mme_backend = "full_mme"}.}
+
+\item{mme_backend}{Character string indicating the numerical backend used for
+the MME solve. \code{"full_mme"} builds and factorizes the full MME system.
+\code{"schur"} factorizes the animal block and absorbs fixed effects through a
+Schur complement. The two backends are algebraically equivalent up to
+floating-point roundoff.}
+
+\item{schur_solver}{Character string indicating the numerical solver used when
+\code{mme_backend = "schur"}. Options are \code{"auto"}, \code{"cholmod"},
+\code{"dense"}, and \code{"eigen_sparse"}. \code{"cholmod"} uses CHOLMOD through
+the Matrix package for sparse kernels; \code{"dense"} uses a dense compiled solver;
+\code{"eigen_sparse"} keeps the Eigen sparse solver for diagnostics and small
+comparisons.}
+
+\item{schur_block_size}{Positive integer. Number of MU right-hand-side columns
+solved per block in the Schur backend.}
+
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
 \value{

@@ -143,6 +143,17 @@
 #' `Ginv` are solved through a dense compiled backend. The `"eigen_sparse"`
 #' solver is retained mainly for diagnostics and small-scale comparisons.
 #'
+#' The `"full_mme"` backend directly factorizes the full MME matrix
+#' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
+#' factorization by factorizing `Cuu = Z'Z + lambda Kinv` and using the fixed-
+#' effect Schur complement `S = X'X - X'Z Cuu^{-1} Z'X`.
+#'
+#' The Schur formulation is algebraically independent of the relationship matrix
+#' type. With `schur_solver = "auto"`, sparse inverse kernels such as `Ainv` are
+#' solved through CHOLMOD via the Matrix package, while dense kernels such as
+#' `Ginv` are solved through a dense compiled backend. The `"eigen_sparse"`
+#' solver is retained mainly for diagnostics and small-scale comparisons.
+#'
 #' @seealso [renum_pedigree()], [build_Ainv()], [build_Ginv()], [build_Hinv()],
 #'   [print.connectedness()], [plot.connectedness()]
 #'
