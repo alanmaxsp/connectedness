@@ -1,3 +1,12 @@
+# connectedness development version
+
+## New features
+
+- Added an alternative Schur-complement backend for `compute_connectedness()` via
+  `mme_backend = "schur"`. The backend avoids direct factorization of the full
+  MME by factorizing `Cuu = Z'Z + lambda Kinv` and absorbing fixed effects
+  through a Schur complement.
+
 # connectedness 0.1.0
 
 ## Features
