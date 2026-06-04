@@ -90,3 +90,11 @@ cd_contrast_mu_mme_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullabl
 cd_contrast_mu_mme_schur_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL, verbose = FALSE) {
     .Call(`_connectedness_cd_contrast_mu_mme_schur_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable, verbose)
 }
+
+#' Compute CD and PEVD via dense Schur-complement MME contrast
+#'
+#' @keywords internal
+#' @noRd
+cd_contrast_mu_schur_dense <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL, block_size = 32L, verbose = TRUE) {
+    .Call(`_connectedness_cd_contrast_mu_schur_dense`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable, block_size, verbose)
+}

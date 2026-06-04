@@ -6,6 +6,10 @@
   `mme_backend = "schur"`. The backend avoids direct factorization of the full
   MME by factorizing `Cuu = Z'Z + lambda Kinv` and absorbing fixed effects
   through a Schur complement.
+- Added `schur_solver` selection for the Schur backend. `"auto"` routes sparse
+  kernels such as `Ainv` through CHOLMOD via Matrix, dense kernels such as
+  `Ginv` through a dense compiled solver, and keeps `"eigen_sparse"` as a
+  diagnostic solver for small comparisons.
 
 # connectedness 0.1.0
 

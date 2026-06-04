@@ -182,8 +182,9 @@ Por defecto, `compute_connectedness()` evita iniciar la resolución directa si l
 dimensión del sistema MME supera `max_mme_dim = 500000`, para devolver un error
 informativo en lugar de arriesgar una caída de R por falta de memoria. Este
 límite puede desactivarse con `max_mme_dim = Inf` bajo responsabilidad del
-usuario. El diagnóstico también informa `schur_W_storage_mb` y
-`schur_S_storage_mb`, útiles para evaluar la memoria esperada del backend Schur.
+usuario. El diagnóstico también informa `matrix_storage`,
+`dense_matrix_gb`, `schur_W_storage_mb`, `schur_S_storage_mb` y el solver Schur
+recomendado, útiles para evaluar la memoria esperada antes de resolver.
 
 Para evitar la factorización directa de la MME completa, también se puede usar
 el backend basado en complemento de Schur:
@@ -198,14 +199,15 @@ res_schur <- compute_connectedness(
   sigma2e       = 5.0,
   relationship  = "Ainv",
   pedigree      = my_pedigree,
-  mme_backend   = "schur"
+  mme_backend   = "schur",
+  schur_solver  = "auto"
 )
 ```
 
-El backend `"full_mme"` se conserva para validación en ejemplos pequeños. El
-backend `"schur"` es algebraicamente equivalente, salvo diferencias numéricas de
-redondeo, y está pensado para problemas dispersos grandes donde factorizar la
-MME completa puede no ser viable.
+Con `schur_solver = "auto"`, `Ainv` y matrices sparse de baja densidad usan
+CHOLMOD a través de Matrix, mientras que `Ginv` y matrices densas usan el solver
+denso compilado. El solver `"eigen_sparse"` se conserva como ruta diagnóstica en
+ejemplos pequeños. El backend `"full_mme"` se conserva para validación.
 
 ### Funciones principales
 
@@ -401,8 +403,9 @@ By default, `compute_connectedness()` avoids starting the direct solve when the
 MME system dimension exceeds `max_mme_dim = 500000`, so it can return an
 informative error instead of risking an R crash due to memory pressure. You can
 disable this limit with `max_mme_dim = Inf` at your own risk. The diagnostics
-also report `schur_W_storage_mb` and `schur_S_storage_mb`, which are useful for
-evaluating the expected memory footprint of the Schur backend.
+also report `matrix_storage`, `dense_matrix_gb`, `schur_W_storage_mb`,
+`schur_S_storage_mb`, and the recommended Schur solver, which are useful for
+evaluating the expected memory footprint before solving.
 
 To avoid direct factorization of the full MME, you can also use the
 Schur-complement backend:
@@ -417,14 +420,15 @@ res_schur <- compute_connectedness(
   sigma2e       = 5.0,
   relationship  = "Ainv",
   pedigree      = my_pedigree,
-  mme_backend   = "schur"
+  mme_backend   = "schur",
+  schur_solver  = "auto"
 )
 ```
 
-The `"full_mme"` backend is retained for validation on small examples. The
-`"schur"` backend is algebraically equivalent, up to floating-point roundoff,
-and is intended for large sparse problems where factorizing the full MME may not
-be feasible.
+With `schur_solver = "auto"`, `Ainv` and low-density sparse matrices use CHOLMOD
+through Matrix, while `Ginv` and dense matrices use the compiled dense solver.
+The `"eigen_sparse"` solver is retained as a diagnostic path for small examples.
+The `"full_mme"` backend is retained for validation.
 
 ### Main functions
 

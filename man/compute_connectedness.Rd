@@ -32,6 +32,8 @@ compute_connectedness(
   dry_run = FALSE,
   max_mme_dim = 500000L,
   mme_backend = c("full_mme", "schur"),
+  schur_solver = c("auto", "cholmod", "dense", "eigen_sparse"),
+  schur_block_size = 16L,
   verbose = TRUE
 )
 }
@@ -77,8 +79,9 @@ to row/column indices in the inverse relationship matrix actually used in
 the analysis. Required for \code{relationship = "custom"}; optional otherwise if
 it can be derived internally.}
 
-\item{rel_matrix}{Optional user-supplied inverse relationship matrix of class
-\code{dgCMatrix}. Used only when \code{relationship = "custom"}.}
+\item{rel_matrix}{Optional user-supplied inverse relationship matrix. Sparse
+Matrix objects are kept sparse; dense matrices are kept dense for Schur solver
+selection when \code{relationship = "custom"}.}
 
 \item{maf_threshold}{Minor allele frequency threshold used when building
 \code{Ginv} or \code{Hinv} internally.}
@@ -131,6 +134,16 @@ the MME solve. \code{"full_mme"} builds and factorizes the full MME system.
 Schur complement. The two backends are algebraically equivalent up to
 floating-point roundoff.}
 
+\item{schur_solver}{Character string indicating the numerical solver used when
+\code{mme_backend = "schur"}. Options are \code{"auto"}, \code{"cholmod"},
+\code{"dense"}, and \code{"eigen_sparse"}. \code{"cholmod"} uses CHOLMOD through
+the Matrix package for sparse kernels; \code{"dense"} uses a dense compiled solver;
+\code{"eigen_sparse"} keeps the Eigen sparse solver for diagnostics and small
+comparisons.}
+
+\item{schur_block_size}{Positive integer. Number of MU right-hand-side columns
+solved per block in the Schur backend.}
+
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
 \value{
@@ -147,6 +160,8 @@ kernel used in the analysis.}
 matrix used in the analysis.}
 \item{mme_backend}{Character string indicating the numerical backend used
 for the MME solve.}
+\item{schur_solver}{Character string indicating the selected Schur solver, or
+\code{NA} when \code{mme_backend = "full_mme"}.}
 \item{year_window}{The time window used, or \code{NULL} if no filtering was applied.}
 \item{overlap}{A data frame describing temporal overlap between MU pairs,
 or \code{NULL} if no temporal filtering was requested.}
@@ -185,6 +200,12 @@ The \code{"full_mme"} backend directly factorizes the full MME matrix
 \code{[X'X X'Z; Z'X Z'Z + lambda Kinv]}. The \code{"schur"} backend avoids this full
 factorization by factorizing \code{Cuu = Z'Z + lambda Kinv} and using the fixed-
 effect Schur complement \code{S = X'X - X'Z Cuu^{-1} Z'X}.
+
+The Schur formulation is algebraically independent of the relationship matrix
+type. With \code{schur_solver = "auto"}, sparse inverse kernels such as \code{Ainv}
+are solved through CHOLMOD via the Matrix package, while dense kernels such as
+\code{Ginv} are solved through a dense compiled backend. The \code{"eigen_sparse"}
+solver is retained mainly for diagnostics and small-scale comparisons.
 }
 \examples{
 \dontrun{
