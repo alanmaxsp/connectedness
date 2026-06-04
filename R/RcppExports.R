@@ -74,10 +74,19 @@ compute_Hinv_from_X <- function(sire, dam, genotyped_idx, X, maf_threshold = 0.0
 #' @param sigma2a Additive genetic variance (or more generally, variance of u).
 #' @param sigma2e Residual variance.
 #' @param mu_names_nullable Optional character vector of MU names (length U).
+#' @param verbose Logical; print progress messages for the main C++ solver stages.
 #' @return List with CD, PEVD, qK, qC matrices (U x U) and n_target_by_MU.
 #' @keywords internal
 #' @noRd
-cd_contrast_mu_mme_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL) {
-    .Call(`_connectedness_cd_contrast_mu_mme_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable)
+cd_contrast_mu_mme_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL, verbose = FALSE) {
+    .Call(`_connectedness_cd_contrast_mu_mme_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable, verbose)
 }
 
+
+#' Compute CD and PEVD via Schur-complement MME contrast
+#'
+#' @keywords internal
+#' @noRd
+cd_contrast_mu_mme_schur_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL, verbose = FALSE) {
+    .Call(`_connectedness_cd_contrast_mu_mme_schur_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable, verbose)
+}

@@ -7,8 +7,35 @@ using Eigen::SparseMatrix;
 using Eigen::Triplet;
 using Eigen::LDLT;
 
+typedef SparseMatrix<double> SpMat;
+typedef Eigen::SimplicialLDLT<
+  SpMat,
+  Eigen::Lower,
+  Eigen::NaturalOrdering<int>
+> NaturalSparseLDLT;
+
 static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, double v) {
   if (v != 0.0) tr.emplace_back(i, j, v);
+}
+
+static inline void progress_msg(bool verbose, const std::string& msg) {
+  if (verbose) {
+    Rcpp::Rcout << msg << std::endl;
+  }
+}
+
+static inline void progress_sparse_summary(
+    bool verbose,
+    const std::string& label,
+    const SpMat& mat
+) {
+  if (verbose) {
+    Rcpp::Rcout << label
+                << " dim = " << mat.rows() << " x " << mat.cols()
+                << ", nnz = " << mat.nonZeros()
+                << ", compressed = " << (mat.isCompressed() ? "true" : "false")
+                << std::endl;
+  }
 }
 
 //' Compute CD and PEVD via MME contrast using a generic inverse relationship matrix
@@ -42,6 +69,7 @@ static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, doub
 //' @param sigma2a Additive genetic variance (or more generally, variance of u).
 //' @param sigma2e Residual variance.
 //' @param mu_names_nullable Optional character vector of MU names (length U).
+//' @param verbose Logical; print progress messages for the main C++ solver stages.
 //' @return List with CD, PEVD, qK, qC matrices (U x U) and n_target_by_MU.
 //' @keywords internal
 //' @noRd
@@ -54,7 +82,8 @@ Rcpp::List cd_contrast_mu_mme_sparse(
     Rcpp::Nullable<Rcpp::LogicalVector> target_nullable,
     const double sigma2a,
     const double sigma2e,
-    Rcpp::Nullable<Rcpp::CharacterVector> mu_names_nullable = R_NilValue
+    Rcpp::Nullable<Rcpp::CharacterVector> mu_names_nullable = R_NilValue,
+    const bool verbose = false
 ) {
   const int N = Kinv.rows();
   if (Kinv.cols() != N) Rcpp::stop("Kinv must be square.");
@@ -99,11 +128,12 @@ Rcpp::List cd_contrast_mu_mme_sparse(
     D[a - 1] += 1.0;
   }
 
-  // XtX
+  progress_msg(verbose, "C++ CD/PEVD: building XtX...");
   SparseMatrix<double> XtX = (X.transpose() * X).pruned();
   XtX.makeCompressed();
+  progress_msg(verbose, "C++ CD/PEVD: finished XtX.");
 
-  // X'Z
+  progress_msg(verbose, "C++ CD/PEVD: building XtZ...");
   std::vector< std::unordered_map<int,double> > col_acc(p);
   col_acc.reserve(p);
 
@@ -131,15 +161,17 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   XtZ.makeCompressed();
 
   SparseMatrix<double> ZtX = XtZ.transpose();
+  progress_msg(verbose, "C++ CD/PEVD: finished XtZ.");
 
-  // Cuu = Z'Z + lambda * Kinv
+  progress_msg(verbose, "C++ CD/PEVD: building Cuu...");
   SparseMatrix<double> Cuu = Kinv;
   Cuu *= lambda;
   Cuu.makeCompressed();
   for (int i = 0; i < N; ++i) Cuu.coeffRef(i, i) += D[i];
   Cuu.makeCompressed();
+  progress_msg(verbose, "C++ CD/PEVD: finished Cuu.");
 
-  // Full MME
+  progress_msg(verbose, "C++ CD/PEVD: building full MME triplets...");
   std::vector<Triplet<double>> tr_M;
   tr_M.reserve((size_t)(XtX.nonZeros() + XtZ.nonZeros() + ZtX.nonZeros() + Cuu.nonZeros()));
 
@@ -162,11 +194,20 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   SparseMatrix<double> MME(M, M);
   MME.setFromTriplets(tr_M.begin(), tr_M.end());
   MME.makeCompressed();
+  progress_msg(verbose, "C++ CD/PEVD: finished full MME.");
 
   Eigen::SimplicialLDLT<SparseMatrix<double>> solverMME;
-  solverMME.compute(MME);
+  progress_msg(verbose, "C++ CD/PEVD: analyzing MME sparsity pattern...");
+  solverMME.analyzePattern(MME);
   if (solverMME.info() != Eigen::Success)
-    Rcpp::stop("Sparse factorization of MME failed. Check collinearity in X or definiteness of the system.");
+    Rcpp::stop("Sparse symbolic analysis of MME failed. Check the MME sparsity pattern.");
+  progress_msg(verbose, "C++ CD/PEVD: finished MME sparsity analysis.");
+
+  progress_msg(verbose, "C++ CD/PEVD: starting numeric MME factorization...");
+  solverMME.factorize(MME);
+  if (solverMME.info() != Eigen::Success)
+    Rcpp::stop("Sparse numeric factorization of MME failed. Check collinearity in X or definiteness of the system.");
+  progress_msg(verbose, "C++ CD/PEVD: finished numeric MME factorization.");
 
   // Solve K * B indirectly from Kinv * Y = B.
   // Kinv may be effectively dense (e.g. Ginv) or mixed sparse/dense (e.g. Hinv),
@@ -176,21 +217,32 @@ Rcpp::List cd_contrast_mu_mme_sparse(
     static_cast<double>(static_cast<long double>(N) * static_cast<long double>(N));
   const bool use_dense_kinv_solver = (kinv_density > 0.20 && N <= 25000);
 
-  Eigen::SimplicialLDLT<SparseMatrix<double>> solverKinv_sparse;
+  NaturalSparseLDLT solverKinv_sparse;
   LDLT<MatrixXd> solverKinv_dense;
 
   if (use_dense_kinv_solver) {
+    progress_msg(verbose, "C++ CD/PEVD: starting dense Kinv factorization...");
     MatrixXd Kinv_dense = MatrixXd(Kinv);
     solverKinv_dense.compute(Kinv_dense);
     if (solverKinv_dense.info() != Eigen::Success)
       Rcpp::stop("Dense factorization of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD: finished dense Kinv factorization.");
   } else {
-    solverKinv_sparse.compute(Kinv);
+    progress_sparse_summary(verbose, "C++ CD/PEVD: Kinv", Kinv);
+    progress_msg(verbose, "C++ CD/PEVD: analyzing sparse Kinv pattern with NaturalOrdering...");
+    solverKinv_sparse.analyzePattern(Kinv);
     if (solverKinv_sparse.info() != Eigen::Success)
-      Rcpp::stop("Sparse factorization of Kinv failed.");
+      Rcpp::stop("Sparse symbolic analysis of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD: finished sparse Kinv pattern analysis with NaturalOrdering.");
+
+    progress_msg(verbose, "C++ CD/PEVD: starting sparse Kinv numeric factorization...");
+    solverKinv_sparse.factorize(Kinv);
+    if (solverKinv_sparse.info() != Eigen::Success)
+      Rcpp::stop("Sparse numeric factorization of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD: finished sparse Kinv numeric factorization.");
   }
 
-  // Aggregate by MU
+  progress_msg(verbose, "C++ CD/PEVD: aggregating by MU and solving blocks...");
   MatrixXd G_den = MatrixXd::Zero(U, U);
   MatrixXd G_num = MatrixXd::Zero(U, U);
 
@@ -207,6 +259,10 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   const int block_cols = std::max(1, std::min(U, std::min(32, max_cols_by_mem)));
   for (int j0 = 0; j0 < U; j0 += block_cols) {
     const int bs = std::min(block_cols, U - j0);
+    if (verbose) {
+      Rcpp::Rcout << "C++ CD/PEVD: solving MU block " << (j0 + 1)
+                  << "-" << (j0 + bs) << " of " << U << std::endl;
+    }
 
     MatrixXd B_blk = MatrixXd::Zero(N, bs);
     for (int k = 0; k < bs; ++k) {
@@ -249,7 +305,7 @@ Rcpp::List cd_contrast_mu_mme_sparse(
     }
   }
 
-  // CD and PEVD
+  progress_msg(verbose, "C++ CD/PEVD: computing CD and PEVD matrices...");
   Rcpp::NumericMatrix CD(U, U), PEVD(U, U), qK_mat(U, U), qC_mat(U, U);
   for (int i = 0; i < U; ++i)
     for (int j = 0; j < U; ++j)
@@ -300,6 +356,304 @@ Rcpp::List cd_contrast_mu_mme_sparse(
     qC_mat.attr("dimnames") = dn;
     nk_out.attr("names") = mu_names;
   }
+
+  progress_msg(verbose, "C++ CD/PEVD: finished CD/PEVD computation.");
+
+  return Rcpp::List::create(
+    Rcpp::Named("CD")             = CD,
+    Rcpp::Named("PEVD")           = PEVD,
+    Rcpp::Named("qK")             = qK_mat,
+    Rcpp::Named("qC")             = qC_mat,
+    Rcpp::Named("n_target_by_MU") = nk_out
+  );
+}
+
+//' Compute CD and PEVD via Schur-complement MME contrast
+//'
+//' @keywords internal
+//' @noRd
+// [[Rcpp::export]]
+Rcpp::List cd_contrast_mu_mme_schur_sparse(
+    const Eigen::SparseMatrix<double>& Kinv,
+    const Rcpp::IntegerVector& id_rec,
+    const Eigen::SparseMatrix<double>& X,
+    const Rcpp::IntegerVector& mu_animal,
+    Rcpp::Nullable<Rcpp::LogicalVector> target_nullable,
+    const double sigma2a,
+    const double sigma2e,
+    Rcpp::Nullable<Rcpp::CharacterVector> mu_names_nullable = R_NilValue,
+    const bool verbose = false
+) {
+  const int N = Kinv.rows();
+  if (Kinv.cols() != N) Rcpp::stop("Kinv must be square.");
+
+  const int nrec = id_rec.size();
+  if (X.rows() != nrec) Rcpp::stop("X must have nrec rows.");
+  if (mu_animal.size() != N) Rcpp::stop("mu_animal must have length N.");
+  if (sigma2a <= 0.0) Rcpp::stop("sigma2a must be > 0.");
+  if (sigma2e < 0.0)  Rcpp::stop("sigma2e must be >= 0.");
+
+  const double lambda = sigma2e / sigma2a;
+  const int p = X.cols();
+
+  std::vector<char> target(N, 1);
+  if (target_nullable.isNotNull()) {
+    Rcpp::LogicalVector t = Rcpp::LogicalVector(target_nullable);
+    if (t.size() != N) Rcpp::stop("target must have length N.");
+    for (int i = 0; i < N; ++i) target[i] = (t[i] == TRUE);
+  }
+
+  int U = 0;
+  for (int i = 0; i < N; ++i) U = std::max(U, (int)mu_animal[i]);
+  if (U < 2) Rcpp::stop("At least 2 MUs required (mu_animal).");
+
+  std::vector< std::vector<int> > idx(U);
+  for (int a = 0; a < N; ++a) {
+    int mu = mu_animal[a];
+    if (mu > 0 && target[a]) idx[mu - 1].push_back(a);
+  }
+
+  std::vector<double> nk(U, 0.0);
+  for (int k = 0; k < U; ++k) nk[k] = (double)idx[k].size();
+
+  VectorXd D = VectorXd::Zero(N);
+  for (int r = 0; r < nrec; ++r) {
+    int a = id_rec[r];
+    if (a < 1 || a > N) Rcpp::stop("id_rec out of range 1..N at r=%d.", r + 1);
+    D[a - 1] += 1.0;
+  }
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: building XtX...");
+  SparseMatrix<double> XtX = (X.transpose() * X).pruned();
+  XtX.makeCompressed();
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished XtX.");
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: building XtZ...");
+  std::vector< std::unordered_map<int,double> > col_acc(p);
+  col_acc.reserve(p);
+
+  for (int j = 0; j < p; ++j) {
+    auto& mp = col_acc[j];
+    for (SparseMatrix<double>::InnerIterator it(X, j); it; ++it) {
+      int r = it.row();
+      double val = it.value();
+      int a = id_rec[r] - 1;
+      mp[a] += val;
+    }
+  }
+
+  std::vector<Triplet<double>> tr_XtZ;
+  tr_XtZ.reserve((size_t)X.nonZeros());
+  for (int j = 0; j < p; ++j) {
+    for (auto const& kv : col_acc[j])
+      add_trip(tr_XtZ, j, kv.first, kv.second);
+    col_acc[j].clear();
+    col_acc[j].rehash(0);
+  }
+
+  SparseMatrix<double> XtZ(p, N);
+  XtZ.setFromTriplets(tr_XtZ.begin(), tr_XtZ.end());
+  XtZ.makeCompressed();
+
+  SparseMatrix<double> ZtX = XtZ.transpose();
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished XtZ.");
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: building Cuu...");
+  SparseMatrix<double> Cuu = Kinv;
+  Cuu *= lambda;
+  Cuu.makeCompressed();
+  for (int i = 0; i < N; ++i) Cuu.coeffRef(i, i) += D[i];
+  Cuu.makeCompressed();
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu.");
+
+  NaturalSparseLDLT solverCuu;
+  progress_sparse_summary(verbose, "C++ CD/PEVD Schur: Cuu", Cuu);
+  progress_msg(verbose, "C++ CD/PEVD Schur: analyzing Cuu sparsity pattern with NaturalOrdering...");
+  solverCuu.analyzePattern(Cuu);
+  if (solverCuu.info() != Eigen::Success)
+    Rcpp::stop("Schur backend: sparse symbolic analysis of Cuu failed.");
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu sparsity analysis with NaturalOrdering.");
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: starting numeric Cuu factorization...");
+  solverCuu.factorize(Cuu);
+  if (solverCuu.info() != Eigen::Success)
+    Rcpp::stop("Schur backend: sparse numeric factorization of Cuu failed.");
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished numeric Cuu factorization.");
+
+  MatrixXd W;
+  LDLT<MatrixXd> solverS;
+  if (p > 0) {
+    progress_msg(verbose, "C++ CD/PEVD Schur: solving W = Cuu^{-1} Z'X...");
+    MatrixXd Cub_dense = MatrixXd(ZtX);
+    W = solverCuu.solve(Cub_dense);
+    if (solverCuu.info() != Eigen::Success)
+      Rcpp::stop("Schur backend: solve(Cuu, Z'X) failed.");
+    Cub_dense.resize(0, 0);
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished W solve.");
+
+    progress_msg(verbose, "C++ CD/PEVD Schur: building fixed-effect Schur complement...");
+    MatrixXd XtX_dense = MatrixXd(XtX);
+    MatrixXd S = XtX_dense - MatrixXd(XtZ * W);
+    S = (S + S.transpose()) * 0.5;
+    progress_msg(verbose, "C++ CD/PEVD Schur: factorizing fixed-effect Schur complement...");
+    solverS.compute(S);
+    if (solverS.info() != Eigen::Success)
+      Rcpp::stop("Schur backend: dense factorization of fixed-effect Schur complement failed.");
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished fixed-effect Schur complement factorization.");
+  } else {
+    W = MatrixXd::Zero(N, 0);
+    progress_msg(verbose, "C++ CD/PEVD Schur: no fixed-effect columns; skipping Schur complement.");
+  }
+
+  const double kinv_density =
+    static_cast<double>(Kinv.nonZeros()) /
+    static_cast<double>(static_cast<long double>(N) * static_cast<long double>(N));
+  const bool use_dense_kinv_solver = (kinv_density > 0.20 && N <= 25000);
+
+  NaturalSparseLDLT solverKinv_sparse;
+  LDLT<MatrixXd> solverKinv_dense;
+
+  if (use_dense_kinv_solver) {
+    progress_msg(verbose, "C++ CD/PEVD Schur: starting dense Kinv factorization...");
+    MatrixXd Kinv_dense = MatrixXd(Kinv);
+    solverKinv_dense.compute(Kinv_dense);
+    if (solverKinv_dense.info() != Eigen::Success)
+      Rcpp::stop("Dense factorization of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished dense Kinv factorization.");
+  } else {
+    progress_sparse_summary(verbose, "C++ CD/PEVD Schur: Kinv", Kinv);
+    progress_msg(verbose, "C++ CD/PEVD Schur: analyzing sparse Kinv pattern with NaturalOrdering...");
+    solverKinv_sparse.analyzePattern(Kinv);
+    if (solverKinv_sparse.info() != Eigen::Success)
+      Rcpp::stop("Sparse symbolic analysis of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished sparse Kinv pattern analysis with NaturalOrdering.");
+
+    progress_msg(verbose, "C++ CD/PEVD Schur: starting sparse Kinv numeric factorization...");
+    solverKinv_sparse.factorize(Kinv);
+    if (solverKinv_sparse.info() != Eigen::Success)
+      Rcpp::stop("Sparse numeric factorization of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished sparse Kinv numeric factorization.");
+  }
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: aggregating by MU and solving blocks...");
+  MatrixXd G_den = MatrixXd::Zero(U, U);
+  MatrixXd G_num = MatrixXd::Zero(U, U);
+
+  const long long target_tmp_bytes = 256LL * 1024LL * 1024LL;
+  const long long bytes_per_col = static_cast<long long>(4LL * N + 2LL * p) * static_cast<long long>(sizeof(double));
+  const int max_cols_by_mem = (bytes_per_col > 0)
+    ? static_cast<int>(std::max(1LL, target_tmp_bytes / bytes_per_col))
+    : 1;
+  const int block_cols = std::max(1, std::min(U, std::min(32, max_cols_by_mem)));
+
+  for (int j0 = 0; j0 < U; j0 += block_cols) {
+    const int bs = std::min(block_cols, U - j0);
+    if (verbose) {
+      Rcpp::Rcout << "C++ CD/PEVD Schur: solving MU block " << (j0 + 1)
+                  << "-" << (j0 + bs) << " of " << U << std::endl;
+    }
+
+    MatrixXd B_blk = MatrixXd::Zero(N, bs);
+    for (int k = 0; k < bs; ++k) {
+      const int mu_j = j0 + k;
+      for (int a : idx[mu_j]) B_blk(a, k) = 1.0;
+    }
+
+    MatrixXd R_blk = solverCuu.solve(B_blk);
+    if (solverCuu.info() != Eigen::Success)
+      Rcpp::stop("Schur backend: solve(Cuu, B_blk) failed.");
+
+    MatrixXd U_blk;
+    if (p > 0) {
+      MatrixXd rhs_b = -MatrixXd(XtZ * R_blk);
+      MatrixXd b_blk = solverS.solve(rhs_b);
+      if (solverS.info() != Eigen::Success)
+        Rcpp::stop("Schur backend: solve(S, rhs_b) failed.");
+      U_blk = R_blk - W * b_blk;
+    } else {
+      U_blk = R_blk;
+    }
+
+    MatrixXd YK_blk;
+    if (use_dense_kinv_solver) {
+      YK_blk = solverKinv_dense.solve(B_blk);
+      if (solverKinv_dense.info() != Eigen::Success)
+        Rcpp::stop("Dense solve with Kinv failed.");
+    } else {
+      YK_blk = solverKinv_sparse.solve(B_blk);
+      if (solverKinv_sparse.info() != Eigen::Success)
+        Rcpp::stop("Sparse solve with Kinv failed.");
+    }
+
+    for (int i = 0; i < U; ++i) {
+      const auto& ii = idx[i];
+      if (ii.empty()) continue;
+
+      for (int k = 0; k < bs; ++k) {
+        double sden = 0.0, snum = 0.0;
+        for (int a : ii) {
+          sden += YK_blk(a, k);
+          snum += U_blk(a, k);
+        }
+        G_den(i, j0 + k) = sden;
+        G_num(i, j0 + k) = snum;
+      }
+    }
+  }
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: computing CD and PEVD matrices...");
+  Rcpp::NumericMatrix CD(U, U), PEVD(U, U), qK_mat(U, U), qC_mat(U, U);
+  for (int i = 0; i < U; ++i)
+    for (int j = 0; j < U; ++j)
+      CD(i, j) = PEVD(i, j) = qK_mat(i, j) = qC_mat(i, j) = NA_REAL;
+
+  for (int i = 0; i < U - 1; ++i) {
+    if (nk[i] <= 0.0) continue;
+
+    for (int j = i + 1; j < U; ++j) {
+      if (nk[j] <= 0.0) continue;
+
+      const double ni = nk[i], nj = nk[j];
+
+      const double qK =
+        G_den(i, i)/(ni * ni) +
+        G_den(j, j)/(nj * nj) -
+        2.0 * G_den(i, j)/(ni * nj);
+
+      const double qC =
+        G_num(i, i)/(ni * ni) +
+        G_num(j, j)/(nj * nj) -
+        2.0 * G_num(i, j)/(ni * nj);
+
+      if (!(qK > 0.0) || !(qC >= 0.0)) {
+        CD(i, j) = CD(j, i) = NA_REAL;
+        continue;
+      }
+
+      CD(i, j)   = CD(j, i)   = 1.0 - lambda * (qC / qK);
+      PEVD(i, j) = PEVD(j, i) = sigma2e * qC;
+      qK_mat(i, j) = qK_mat(j, i) = qK;
+      qC_mat(i, j) = qC_mat(j, i) = qC;
+    }
+  }
+
+  Rcpp::NumericVector nk_out(U);
+  for (int k = 0; k < U; ++k) nk_out[k] = nk[k];
+
+  if (mu_names_nullable.isNotNull()) {
+    Rcpp::CharacterVector mu_names(mu_names_nullable);
+    if (mu_names.size() != U)
+      Rcpp::stop("mu_names must have length U (U=%d).", U);
+
+    Rcpp::List dn = Rcpp::List::create(mu_names, mu_names);
+    CD.attr("dimnames")   = dn;
+    PEVD.attr("dimnames") = dn;
+    qK_mat.attr("dimnames") = dn;
+    qC_mat.attr("dimnames") = dn;
+    nk_out.attr("names") = mu_names;
+  }
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished CD/PEVD computation.");
 
   return Rcpp::List::create(
     Rcpp::Named("CD")             = CD,
