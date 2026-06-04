@@ -82,6 +82,7 @@ test_that("compute_connectedness detiene problemas que superan max_mme_dim", {
       relationship = "custom",
       rel_matrix = Kinv,
       animal_index = animal_index,
+      mme_backend = "full_mme",
       max_mme_dim = 3,
       verbose = FALSE
     ),

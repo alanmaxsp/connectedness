@@ -10,6 +10,11 @@
   kernels such as `Ainv` through CHOLMOD via Matrix, dense kernels such as
   `Ginv` through a dense compiled solver, and keeps `"eigen_sparse"` as a
   diagnostic solver for small comparisons.
+- The Schur backend is now the default `compute_connectedness()` backend; the
+  full-MME backend remains available with `mme_backend = "full_mme"`.
+- Changed `min_records_per_year` to an optional temporal activity filter when
+  `year_window` is provided. MUs are retained only if they meet the minimum
+  records per year in at least 50% of the years in the window.
 
 # connectedness 0.1.0
 

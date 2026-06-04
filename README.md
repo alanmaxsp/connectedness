@@ -139,7 +139,9 @@ plot(res_A, which = "all")
 ### Restricción temporal opcional
 
 La conectividad también puede evaluarse dentro de una ventana temporal
-restringida:
+restringida. Si se define `min_records_per_year`, solo se conservan las unidades
+de manejo activas con al menos ese número de registros en al menos el 50% de los
+años de la ventana:
 
 ```r
 res_time <- compute_connectedness(
@@ -153,7 +155,7 @@ res_time <- compute_connectedness(
   pedigree             = my_pedigree,
   year_col             = "birth_year",
   year_window          = c(2018, 2022),
-  min_records_per_year = 10
+  min_records_per_year = 30
 )
 
 plot(res_time, which = "overlap")
@@ -178,16 +180,17 @@ diag <- compute_connectedness(
 )
 ```
 
-Por defecto, `compute_connectedness()` evita iniciar la resolución directa si la
-dimensión del sistema MME supera `max_mme_dim = 500000`, para devolver un error
-informativo en lugar de arriesgar una caída de R por falta de memoria. Este
-límite puede desactivarse con `max_mme_dim = Inf` bajo responsabilidad del
-usuario. El diagnóstico también informa `matrix_storage`,
+Cuando se usa `mme_backend = "full_mme"`, `compute_connectedness()` evita iniciar
+la resolución directa si la dimensión del sistema MME supera
+`max_mme_dim = 500000`, para devolver un error informativo en lugar de arriesgar
+una caída de R por falta de memoria. Este límite puede desactivarse con
+`max_mme_dim = Inf` bajo responsabilidad del usuario. El diagnóstico también
+informa `matrix_storage`,
 `dense_matrix_gb`, `schur_W_storage_mb`, `schur_S_storage_mb` y el solver Schur
 recomendado, útiles para evaluar la memoria esperada antes de resolver.
 
-Para evitar la factorización directa de la MME completa, también se puede usar
-el backend basado en complemento de Schur:
+Por defecto, `compute_connectedness()` usa el backend basado en complemento de
+Schur para evitar la factorización directa de la MME completa:
 
 ```r
 res_schur <- compute_connectedness(
@@ -361,7 +364,9 @@ plot(res_A, which = "all")
 
 ### Optional temporal restriction
 
-Connectedness can also be evaluated within a restricted time window:
+Connectedness can also be evaluated within a restricted time window. If
+`min_records_per_year` is set, only management units active with at least that
+many records in at least 50% of the years in the window are retained:
 
 ```r
 res_time <- compute_connectedness(
@@ -375,7 +380,7 @@ res_time <- compute_connectedness(
   pedigree             = my_pedigree,
   year_col             = "birth_year",
   year_window          = c(2018, 2022),
-  min_records_per_year = 10
+  min_records_per_year = 30
 )
 
 plot(res_time, which = "overlap")
@@ -399,16 +404,17 @@ diag <- compute_connectedness(
 )
 ```
 
-By default, `compute_connectedness()` avoids starting the direct solve when the
-MME system dimension exceeds `max_mme_dim = 500000`, so it can return an
-informative error instead of risking an R crash due to memory pressure. You can
-disable this limit with `max_mme_dim = Inf` at your own risk. The diagnostics
-also report `matrix_storage`, `dense_matrix_gb`, `schur_W_storage_mb`,
+When `mme_backend = "full_mme"`, `compute_connectedness()` avoids starting the
+direct solve when the MME system dimension exceeds `max_mme_dim = 500000`, so it
+can return an informative error instead of risking an R crash due to memory
+pressure. You can disable this limit with `max_mme_dim = Inf` at your own risk.
+The diagnostics also report `matrix_storage`, `dense_matrix_gb`,
+`schur_W_storage_mb`,
 `schur_S_storage_mb`, and the recommended Schur solver, which are useful for
 evaluating the expected memory footprint before solving.
 
-To avoid direct factorization of the full MME, you can also use the
-Schur-complement backend:
+By default, `compute_connectedness()` uses the Schur-complement backend to avoid
+direct factorization of the full MME:
 
 ```r
 res_schur <- compute_connectedness(

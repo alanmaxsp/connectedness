@@ -42,6 +42,15 @@ print.connectedness <- function(x, digits = 3, ...) {
   if (!is.null(x$year_window)) {
     cat(sprintf("Year window        : [%d, %d]\n", x$year_window[1], x$year_window[2]))
   }
+  if (!is.null(x$activity_summary)) {
+    n_in <- sum(x$activity_summary$eligible)
+    n_out <- sum(!x$activity_summary$eligible)
+    cat(sprintf(
+      "Temporal activity filter: retained %d MUs; excluded %d MUs\n",
+      n_in,
+      n_out
+    ))
+  }
 
   if (!is.null(x$n_target)) {
     nt <- as.numeric(x$n_target)

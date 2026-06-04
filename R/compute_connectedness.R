@@ -65,9 +65,11 @@
 #' @param year_window Optional numeric vector of length 2 specifying the time
 #'   window to retain, for example `c(2003, 2022)`. If `NULL`, no temporal
 #'   filtering is applied.
-#' @param min_records_per_year Integer giving the minimum number of records per
-#'   MU-year combination for a year to be considered valid when computing
-#'   temporal overlap. Only used when `year_window` is not `NULL`.
+#' @param min_records_per_year Optional integer. If `year_window` is provided,
+#'   this defines the minimum number of records required for an MU to be
+#'   considered active in a given year. MUs are retained in the connectedness
+#'   analysis only if they are active in at least 50% of the years in
+#'   `year_window`. If `NULL`, no temporal activity filter is applied.
 #' @param dry_run Logical. If `TRUE`, return problem-size diagnostics before the
 #'   final MME solve instead of computing connectedness metrics.
 #' @param max_mme_dim Positive integer or `Inf`. Maximum allowed dimension of
@@ -75,10 +77,10 @@
 #'   final sparse direct solve is attempted. Set to `Inf` to disable this safety
 #'   check. This safety check is applied only when `mme_backend = "full_mme"`.
 #' @param mme_backend Character string indicating the numerical backend used for
-#'   the MME solve. `"full_mme"` builds and factorizes the full MME system.
-#'   `"schur"` factorizes the animal block and absorbs fixed effects through a
-#'   Schur complement. The two backends are algebraically equivalent up to
-#'   floating-point roundoff.
+#'   the MME solve. `"schur"` (the default) factorizes the animal block and
+#'   absorbs fixed effects through a Schur complement. `"full_mme"` builds and
+#'   factorizes the full MME system. The two backends are algebraically
+#'   equivalent up to floating-point roundoff.
 #' @param schur_solver Character string indicating the numerical solver used
 #'   when `mme_backend = "schur"`. Options are `"auto"`, `"cholmod"`,
 #'   `"dense"`, and `"eigen_sparse"`. `"cholmod"` uses CHOLMOD through the
@@ -107,6 +109,8 @@
 #'   \item{year_window}{The time window used, or `NULL` if no filtering was applied.}
 #'   \item{overlap}{A data frame describing temporal overlap between MU pairs,
 #'     or `NULL` if no temporal filtering was requested.}
+#'   \item{activity_summary}{A data frame describing the temporal activity filter
+#'     applied to MUs, or `NULL` if no activity filter was applied.}
 #'   \item{call}{The matched function call.}
 #' }
 #' If `dry_run = TRUE`, the function returns a diagnostics list instead of a
@@ -123,9 +127,21 @@
 #' the kernel actually used in the analysis. The object component `qK` therefore
 #' refers generically to the denominator under `A`, `G`, `H`, or a custom kernel.
 #'
-#' When a time window is specified, the function also reports the years in which
-#' MU pairs overlap according to the observed records and the chosen minimum
-#' record threshold.
+#' When a time window is specified and `min_records_per_year` is not `NULL`,
+#' MUs are first filtered by temporal activity before `CD`, `PEVD`, `qK`, and
+#' `qC` are computed. The function also reports the years in which retained MU
+#' pairs overlap.
+#'
+#' The `"full_mme"` backend directly factorizes the full MME matrix
+#' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
+#' factorization by factorizing `Cuu = Z'Z + lambda Kinv` and using the fixed-
+#' effect Schur complement `S = X'X - X'Z Cuu^{-1} Z'X`.
+#'
+#' The Schur formulation is algebraically independent of the relationship matrix
+#' type. With `schur_solver = "auto"`, sparse inverse kernels such as `Ainv` are
+#' solved through CHOLMOD via the Matrix package, while dense kernels such as
+#' `Ginv` are solved through a dense compiled backend. The `"eigen_sparse"`
+#' solver is retained mainly for diagnostics and small-scale comparisons.
 #'
 #' The `"full_mme"` backend directly factorizes the full MME matrix
 #' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
@@ -208,10 +224,10 @@ compute_connectedness <- function(
     scale_pevd           = FALSE,
     year_col             = NULL,
     year_window          = NULL,
-    min_records_per_year = 10,
+    min_records_per_year = NULL,
     dry_run              = FALSE,
     max_mme_dim          = 500000L,
-    mme_backend          = c("full_mme", "schur"),
+    mme_backend          = c("schur", "full_mme"),
     schur_solver         = c("auto", "cholmod", "dense", "eigen_sparse"),
     schur_block_size     = 16L,
     verbose              = TRUE
@@ -243,10 +259,13 @@ compute_connectedness <- function(
   if (!is.logical(scale_pevd) || length(scale_pevd) != 1L || is.na(scale_pevd)) {
     stop("'scale_pevd' must be TRUE or FALSE.")
   }
-  if (!is.numeric(min_records_per_year) || length(min_records_per_year) != 1L ||
-      is.na(min_records_per_year) || min_records_per_year < 1 ||
-      min_records_per_year != as.integer(min_records_per_year)) {
-    stop("'min_records_per_year' must be a single positive integer.")
+  if (!is.null(min_records_per_year)) {
+    if (!is.numeric(min_records_per_year) || length(min_records_per_year) != 1L ||
+        is.na(min_records_per_year) || min_records_per_year < 1 ||
+        min_records_per_year != as.integer(min_records_per_year)) {
+      stop("'min_records_per_year' must be NULL or a single positive integer.")
+    }
+    min_records_per_year <- as.integer(min_records_per_year)
   }
   if (!is.logical(dry_run) || length(dry_run) != 1L || is.na(dry_run)) {
     stop("'dry_run' must be TRUE or FALSE.")
@@ -273,7 +292,7 @@ compute_connectedness <- function(
       stop("'year_window' must be a numeric vector of length 2 with year_window[1] <= year_window[2].")
     }
   }
-  if (is.null(year_window) && !is.null(year_col) && min_records_per_year != 10 && verbose) {
+  if (is.null(year_window) && !is.null(min_records_per_year) && verbose) {
     message("'min_records_per_year' is ignored when 'year_window' is NULL.")
   }
 
@@ -426,6 +445,8 @@ compute_connectedness <- function(
   }
 
   overlap_dt <- NULL
+  activity_summary <- NULL
+  n_mus_before_activity_filter <- NA_integer_
 
   if (!is.null(year_window)) {
     data[[year_col]] <- as.integer(data[[year_col]])
@@ -437,6 +458,39 @@ compute_connectedness <- function(
 
     if (nrow(data_window) == 0) {
       stop("No records remain after applying 'year_window'. Check the year range.")
+    }
+
+    n_mus_before_activity_filter <- length(unique(data_window[[mu_col]]))
+
+    if (!is.null(min_records_per_year)) {
+      if (verbose) {
+        message(sprintf(
+          paste0(
+            "Applying temporal activity filter: MUs must have at least %d records/year ",
+            "in at least 50%% of the years in [%d, %d]..."
+          ),
+          min_records_per_year, Y1, Y2
+        ))
+      }
+
+      activity <- .filter_active_mus(
+        data_window = data_window,
+        mu_col = mu_col,
+        year_col = year_col,
+        year_window = year_window,
+        min_records_per_year = min_records_per_year
+      )
+
+      data_window <- activity$data_window
+      activity_summary <- activity$activity_summary
+
+      if (verbose) {
+        message(sprintf(
+          "Temporal activity filter retained %d MUs and excluded %d MUs.",
+          length(activity$eligible_mus),
+          length(activity$excluded_mus)
+        ))
+      }
     }
 
     overlap_dt <- .compute_overlap(data_window, mu_col, year_col, min_records_per_year)
@@ -489,6 +543,9 @@ compute_connectedness <- function(
     schur_solver = schur_solver,
     selected_schur_solver = selected_schur_solver,
     max_mme_dim = max_mme_dim,
+    min_records_per_year = min_records_per_year,
+    activity_summary = activity_summary,
+    n_mus_before_activity_filter = n_mus_before_activity_filter,
     call = cl
   )
 
@@ -608,9 +665,10 @@ compute_connectedness <- function(
       relationship  = relationship,
       mme_backend   = mme_backend,
       schur_solver  = if (mme_backend == "schur") selected_schur_solver else NA_character_,
-      year_window   = year_window,
-      overlap      = overlap_dt,
-      call         = cl
+      year_window      = year_window,
+      overlap          = overlap_dt,
+      activity_summary = activity_summary,
+      call             = cl
     ),
     class = "connectedness"
   )
@@ -704,6 +762,9 @@ compute_connectedness <- function(
                                        schur_solver,
                                        selected_schur_solver,
                                        max_mme_dim,
+                                       min_records_per_year,
+                                       activity_summary,
+                                       n_mus_before_activity_filter,
                                        call) {
 
   rel_n <- nrow(rel_matrix)
@@ -720,6 +781,20 @@ compute_connectedness <- function(
   n_target <- sum(target)
   n_mu <- length(mu_levels)
   rel_density <- rel_nnz / (as.numeric(rel_n) * as.numeric(rel_n))
+  activity_filter_applied <- !is.null(activity_summary)
+  n_mus_after_activity_filter <- n_mu
+  min_active_years <- if (activity_filter_applied) {
+    unique(activity_summary$min_active_years)[1]
+  } else {
+    NA_integer_
+  }
+  n_years_window <- if (activity_filter_applied) {
+    unique(activity_summary$n_years_window)[1]
+  } else if (!is.null(year_window)) {
+    length(seq.int(as.integer(year_window[1]), as.integer(year_window[2])))
+  } else {
+    NA_integer_
+  }
 
   # This is only the explicit sparse MME storage footprint before symbolic
   # factorization. Sparse direct factorization can require substantially more
@@ -746,6 +821,12 @@ compute_connectedness <- function(
       n_records = n_records,
       n_target = n_target,
       n_management_units = n_mu,
+      activity_filter_applied = activity_filter_applied,
+      n_mus_before_activity_filter = n_mus_before_activity_filter,
+      n_mus_after_activity_filter = n_mus_after_activity_filter,
+      min_records_per_year = min_records_per_year,
+      min_active_years = min_active_years,
+      n_years_window = n_years_window,
       n_fixed_effect_columns = p,
       mme_dim = mme_dim,
       relationship_nonzeros = rel_nnz,
@@ -802,6 +883,13 @@ compute_connectedness <- function(
   message(sprintf("  records                   : %d", x$n_records))
   message(sprintf("  target animals            : %d", x$n_target))
   message(sprintf("  management units          : %d", x$n_management_units))
+  message(sprintf("  activity filter applied   : %s", x$activity_filter_applied))
+  if (isTRUE(x$activity_filter_applied)) {
+    message(sprintf("  MUs before activity filter: %d", x$n_mus_before_activity_filter))
+    message(sprintf("  MUs after activity filter : %d", x$n_mus_after_activity_filter))
+    message(sprintf("  min records per MU-year   : %d", x$min_records_per_year))
+    message(sprintf("  min active years required : %d of %d", x$min_active_years, x$n_years_window))
+  }
   message(sprintf("  fixed-effect columns      : %d", x$n_fixed_effect_columns))
   message(sprintf("  MME dimension (p + N)     : %d", x$mme_dim))
   message(sprintf("  relationship nonzeros     : %d", x$relationship_nonzeros))
@@ -822,7 +910,66 @@ compute_connectedness <- function(
   invisible(x)
 }
 
-.compute_overlap <- function(data_window, mu_col, year_col, min_records_per_year) {
+
+.filter_active_mus <- function(data_window,
+                               mu_col,
+                               year_col,
+                               year_window,
+                               min_records_per_year) {
+
+  df <- as.data.frame(data_window, stringsAsFactors = FALSE)
+  df[[mu_col]] <- as.character(df[[mu_col]])
+  df[[year_col]] <- as.integer(df[[year_col]])
+
+  years <- seq.int(as.integer(year_window[1]), as.integer(year_window[2]))
+  n_years_window <- length(years)
+  min_active_years <- ceiling(0.5 * n_years_window)
+
+  counts <- stats::aggregate(
+    rep(1L, nrow(df)),
+    by = list(MU = df[[mu_col]], Year = df[[year_col]]),
+    FUN = length
+  )
+  names(counts)[3] <- "N"
+  counts$active <- counts$N >= min_records_per_year
+
+  activity_summary <- stats::aggregate(
+    counts$active,
+    by = list(MU = counts$MU),
+    FUN = sum
+  )
+  names(activity_summary)[2] <- "n_active_years"
+
+  activity_summary$n_years_window <- n_years_window
+  activity_summary$min_active_years <- min_active_years
+  activity_summary$min_records_per_year <- min_records_per_year
+  activity_summary$eligible <- activity_summary$n_active_years >= min_active_years
+
+  eligible_mus <- activity_summary$MU[activity_summary$eligible]
+  data_filtered <- df[df[[mu_col]] %in% eligible_mus, , drop = FALSE]
+
+  if (length(eligible_mus) < 2L) {
+    stop(
+      "Fewer than 2 MUs remain after applying the temporal activity filter. ",
+      "Consider lowering 'min_records_per_year' or widening 'year_window'."
+    )
+  }
+
+  list(
+    data_window = data_filtered,
+    activity_summary = activity_summary,
+    eligible_mus = eligible_mus,
+    excluded_mus = activity_summary$MU[!activity_summary$eligible],
+    n_years_window = n_years_window,
+    min_active_years = min_active_years
+  )
+}
+
+.compute_overlap <- function(data_window, mu_col, year_col, min_records_per_year = 1L) {
+
+  if (is.null(min_records_per_year)) {
+    min_records_per_year <- 1L
+  }
 
   df <- as.data.frame(data_window, stringsAsFactors = FALSE)
   df[[mu_col]]   <- as.character(df[[mu_col]])
