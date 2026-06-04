@@ -72,7 +72,12 @@
 #' @param max_mme_dim Positive integer or `Inf`. Maximum allowed dimension of
 #'   the full MME system (`nrow(rel_matrix) + ncol(fixed_effects)`) before the
 #'   final sparse direct solve is attempted. Set to `Inf` to disable this safety
-#'   check.
+#'   check. This safety check is applied only when `mme_backend = "full_mme"`.
+#' @param mme_backend Character string indicating the numerical backend used for
+#'   the MME solve. `"full_mme"` builds and factorizes the full MME system.
+#'   `"schur"` factorizes the animal block and absorbs fixed effects through a
+#'   Schur complement. The two backends are algebraically equivalent up to
+#'   floating-point roundoff.
 #' @param verbose Logical. If `TRUE`, progress messages are printed.
 #'
 #' @return An object of class `"connectedness"`, which is a list with:
@@ -86,6 +91,8 @@
 #'   \item{n_target}{Named numeric vector. Number of target animals per MU.}
 #'   \item{relationship}{Character string indicating the inverse relationship
 #'     matrix used in the analysis.}
+#'   \item{mme_backend}{Character string indicating the numerical backend used
+#'     for the MME solve.}
 #'   \item{year_window}{The time window used, or `NULL` if no filtering was applied.}
 #'   \item{overlap}{A data frame describing temporal overlap between MU pairs,
 #'     or `NULL` if no temporal filtering was requested.}
@@ -108,6 +115,11 @@
 #' When a time window is specified, the function also reports the years in which
 #' MU pairs overlap according to the observed records and the chosen minimum
 #' record threshold.
+#'
+#' The `"full_mme"` backend directly factorizes the full MME matrix
+#' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
+#' factorization by factorizing `Cuu = Z'Z + lambda Kinv` and using the fixed-
+#' effect Schur complement `S = X'X - X'Z Cuu^{-1} Z'X`.
 #'
 #' @seealso [renum_pedigree()], [build_Ainv()], [build_Ginv()], [build_Hinv()],
 #'   [print.connectedness()], [plot.connectedness()]
@@ -182,11 +194,13 @@ compute_connectedness <- function(
     min_records_per_year = 10,
     dry_run              = FALSE,
     max_mme_dim          = 500000L,
+    mme_backend          = c("full_mme", "schur"),
     verbose              = TRUE
 ) {
 
   cl <- match.call()
   relationship <- match.arg(relationship)
+  mme_backend <- match.arg(mme_backend)
 
   if (!is.data.frame(data)) {
     stop("'data' must be a data frame.")
@@ -442,6 +456,8 @@ compute_connectedness <- function(
     target = target,
     year_window = year_window,
     scale_pevd = scale_pevd,
+    mme_backend = mme_backend,
+    max_mme_dim = max_mme_dim,
     call = cl
   )
 
@@ -450,26 +466,50 @@ compute_connectedness <- function(
     return(invisible(diagnostics))
   }
 
-  .check_connectedness_problem_size(diagnostics, max_mme_dim)
+  if (mme_backend == "full_mme") {
+    .check_connectedness_problem_size(diagnostics, max_mme_dim)
+  }
 
   id_rec <- as.integer(data_window$.new_id)
 
   if (verbose) {
-    message(sprintf("Computing CD and PEVD via MME using %s...", relationship))
+    message(sprintf(
+      "Computing CD and PEVD via MME using %s relationship and %s backend...",
+      relationship,
+      mme_backend
+    ))
   }
-  res_cpp <- .Call(
-    `_connectedness_cd_contrast_mu_mme_sparse`,
-    rel_matrix,
-    id_rec,
-    Xsp,
-    as.integer(mu_animal),
-    target,
-    sigma2a,
-    sigma2e,
-    as.character(mu_levels),
-    verbose,
-    PACKAGE = "connectedness"
-  )
+  if (mme_backend == "full_mme") {
+    res_cpp <- .Call(
+      `_connectedness_cd_contrast_mu_mme_sparse`,
+      rel_matrix,
+      id_rec,
+      Xsp,
+      as.integer(mu_animal),
+      target,
+      sigma2a,
+      sigma2e,
+      as.character(mu_levels),
+      verbose,
+      PACKAGE = "connectedness"
+    )
+  } else if (mme_backend == "schur") {
+    res_cpp <- .Call(
+      `_connectedness_cd_contrast_mu_mme_schur_sparse`,
+      rel_matrix,
+      id_rec,
+      Xsp,
+      as.integer(mu_animal),
+      target,
+      sigma2a,
+      sigma2e,
+      as.character(mu_levels),
+      verbose,
+      PACKAGE = "connectedness"
+    )
+  } else {
+    stop("Unsupported 'mme_backend'.")
+  }
 
   pevd_out <- res_cpp$PEVD
   if (scale_pevd) {
@@ -484,6 +524,7 @@ compute_connectedness <- function(
       qC           = res_cpp$qC,
       n_target     = res_cpp$n_target_by_MU,
       relationship = relationship,
+      mme_backend  = mme_backend,
       year_window  = year_window,
       overlap      = overlap_dt,
       call         = cl
@@ -504,6 +545,8 @@ compute_connectedness <- function(
                                        target,
                                        year_window,
                                        scale_pevd,
+                                       mme_backend,
+                                       max_mme_dim,
                                        call) {
 
   rel_n <- nrow(rel_matrix)
@@ -522,6 +565,13 @@ compute_connectedness <- function(
   explicit_mme_nnz_lower_bound <- rel_nnz + 2 * x_nnz + p
   explicit_mme_storage_mb_lower_bound <-
     explicit_mme_nnz_lower_bound * (8 + 4) / 1024^2
+  schur_W_storage_mb <- as.numeric(rel_n) * as.numeric(p) * 8 / 1024^2
+  schur_S_storage_mb <- as.numeric(p) * as.numeric(p) * 8 / 1024^2
+  recommended_backend <- if (is.finite(max_mme_dim) && mme_dim > max_mme_dim) {
+    "schur"
+  } else {
+    "full_mme_or_schur"
+  }
 
   structure(
     list(
@@ -537,6 +587,10 @@ compute_connectedness <- function(
       fixed_effect_nonzeros = x_nnz,
       explicit_mme_nonzeros_lower_bound = explicit_mme_nnz_lower_bound,
       explicit_mme_storage_mb_lower_bound = explicit_mme_storage_mb_lower_bound,
+      schur_W_storage_mb = schur_W_storage_mb,
+      schur_S_storage_mb = schur_S_storage_mb,
+      recommended_backend = recommended_backend,
+      requested_backend = mme_backend,
       year_window = year_window,
       scale_pevd = scale_pevd,
       call = call
@@ -580,6 +634,10 @@ compute_connectedness <- function(
     "  explicit MME storage lower bound: %.1f MB",
     x$explicit_mme_storage_mb_lower_bound
   ))
+  message(sprintf("  Schur W storage           : %.1f MB", x$schur_W_storage_mb))
+  message(sprintf("  Schur S storage           : %.1f MB", x$schur_S_storage_mb))
+  message(sprintf("  requested backend         : %s", x$requested_backend))
+  message(sprintf("  recommended backend       : %s", x$recommended_backend))
   invisible(x)
 }
 

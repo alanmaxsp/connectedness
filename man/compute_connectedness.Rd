@@ -31,6 +31,7 @@ compute_connectedness(
   min_records_per_year = 10,
   dry_run = FALSE,
   max_mme_dim = 500000L,
+  mme_backend = c("full_mme", "schur"),
   verbose = TRUE
 )
 }
@@ -122,7 +123,13 @@ final MME solve instead of computing connectedness metrics.}
 \item{max_mme_dim}{Positive integer or \code{Inf}. Maximum allowed dimension of
 the full MME system (\code{nrow(rel_matrix) + ncol(fixed_effects)}) before the
 final sparse direct solve is attempted. Set to \code{Inf} to disable this safety
-check.}
+check. This safety check is applied only when \code{mme_backend = "full_mme"}.}
+
+\item{mme_backend}{Character string indicating the numerical backend used for
+the MME solve. \code{"full_mme"} builds and factorizes the full MME system.
+\code{"schur"} factorizes the animal block and absorbs fixed effects through a
+Schur complement. The two backends are algebraically equivalent up to
+floating-point roundoff.}
 
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
@@ -138,6 +145,8 @@ kernel used in the analysis.}
 \item{n_target}{Named numeric vector. Number of target animals per MU.}
 \item{relationship}{Character string indicating the inverse relationship
 matrix used in the analysis.}
+\item{mme_backend}{Character string indicating the numerical backend used
+for the MME solve.}
 \item{year_window}{The time window used, or \code{NULL} if no filtering was applied.}
 \item{overlap}{A data frame describing temporal overlap between MU pairs,
 or \code{NULL} if no temporal filtering was requested.}
@@ -171,6 +180,11 @@ refers generically to the denominator under \code{A}, \code{G}, \code{H}, or a c
 When a time window is specified, the function also reports the years in which
 MU pairs overlap according to the observed records and the chosen minimum
 record threshold.
+
+The \code{"full_mme"} backend directly factorizes the full MME matrix
+\code{[X'X X'Z; Z'X Z'Z + lambda Kinv]}. The \code{"schur"} backend avoids this full
+factorization by factorizing \code{Cuu = Z'Z + lambda Kinv} and using the fixed-
+effect Schur complement \code{S = X'X - X'Z Cuu^{-1} Z'X}.
 }
 \examples{
 \dontrun{

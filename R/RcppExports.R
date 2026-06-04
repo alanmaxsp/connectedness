@@ -82,3 +82,11 @@ cd_contrast_mu_mme_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullabl
     .Call(`_connectedness_cd_contrast_mu_mme_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable, verbose)
 }
 
+
+#' Compute CD and PEVD via Schur-complement MME contrast
+#'
+#' @keywords internal
+#' @noRd
+cd_contrast_mu_mme_schur_sparse <- function(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable = NULL, verbose = FALSE) {
+    .Call(`_connectedness_cd_contrast_mu_mme_schur_sparse`, Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable, verbose)
+}

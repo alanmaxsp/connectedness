@@ -182,7 +182,30 @@ Por defecto, `compute_connectedness()` evita iniciar la resolución directa si l
 dimensión del sistema MME supera `max_mme_dim = 500000`, para devolver un error
 informativo en lugar de arriesgar una caída de R por falta de memoria. Este
 límite puede desactivarse con `max_mme_dim = Inf` bajo responsabilidad del
-usuario.
+usuario. El diagnóstico también informa `schur_W_storage_mb` y
+`schur_S_storage_mb`, útiles para evaluar la memoria esperada del backend Schur.
+
+Para evitar la factorización directa de la MME completa, también se puede usar
+el backend basado en complemento de Schur:
+
+```r
+res_schur <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree,
+  mme_backend   = "schur"
+)
+```
+
+El backend `"full_mme"` se conserva para validación en ejemplos pequeños. El
+backend `"schur"` es algebraicamente equivalente, salvo diferencias numéricas de
+redondeo, y está pensado para problemas dispersos grandes donde factorizar la
+MME completa puede no ser viable.
 
 ### Funciones principales
 
@@ -377,7 +400,31 @@ diag <- compute_connectedness(
 By default, `compute_connectedness()` avoids starting the direct solve when the
 MME system dimension exceeds `max_mme_dim = 500000`, so it can return an
 informative error instead of risking an R crash due to memory pressure. You can
-disable this limit with `max_mme_dim = Inf` at your own risk.
+disable this limit with `max_mme_dim = Inf` at your own risk. The diagnostics
+also report `schur_W_storage_mb` and `schur_S_storage_mb`, which are useful for
+evaluating the expected memory footprint of the Schur backend.
+
+To avoid direct factorization of the full MME, you can also use the
+Schur-complement backend:
+
+```r
+res_schur <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree,
+  mme_backend   = "schur"
+)
+```
+
+The `"full_mme"` backend is retained for validation on small examples. The
+`"schur"` backend is algebraically equivalent, up to floating-point roundoff,
+and is intended for large sparse problems where factorizing the full MME may not
+be feasible.
 
 ### Main functions
 

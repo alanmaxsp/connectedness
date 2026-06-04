@@ -134,6 +134,26 @@ BEGIN_RCPP
 END_RCPP
 }
 
+// cd_contrast_mu_mme_schur_sparse
+Rcpp::List cd_contrast_mu_mme_schur_sparse(const Eigen::SparseMatrix<double>& Kinv, const Rcpp::IntegerVector& id_rec, const Eigen::SparseMatrix<double>& X, const Rcpp::IntegerVector& mu_animal, Rcpp::Nullable<Rcpp::LogicalVector> target_nullable, const double sigma2a, const double sigma2e, Rcpp::Nullable<Rcpp::CharacterVector> mu_names_nullable, const bool verbose);
+RcppExport SEXP _connectedness_cd_contrast_mu_mme_schur_sparse(SEXP KinvSEXP, SEXP id_recSEXP, SEXP XSEXP, SEXP mu_animalSEXP, SEXP target_nullableSEXP, SEXP sigma2aSEXP, SEXP sigma2eSEXP, SEXP mu_names_nullableSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::SparseMatrix<double>& >::type Kinv(KinvSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type id_rec(id_recSEXP);
+    Rcpp::traits::input_parameter< const Eigen::SparseMatrix<double>& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type mu_animal(mu_animalSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::LogicalVector> >::type target_nullable(target_nullableSEXP);
+    Rcpp::traits::input_parameter< const double >::type sigma2a(sigma2aSEXP);
+    Rcpp::traits::input_parameter< const double >::type sigma2e(sigma2eSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type mu_names_nullable(mu_names_nullableSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(cd_contrast_mu_mme_schur_sparse(Kinv, id_rec, X, mu_animal, target_nullable, sigma2a, sigma2e, mu_names_nullable, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+
 static const R_CallMethodDef CallEntries[] = {
     {"_connectedness_compute_F_ML92", (DL_FUNC) &_connectedness_compute_F_ML92, 2},
     {"_connectedness_build_Ainv_sparse_RA", (DL_FUNC) &_connectedness_build_Ainv_sparse_RA, 2},
@@ -142,6 +162,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_connectedness_compute_Hinv", (DL_FUNC) &_connectedness_compute_Hinv, 7},
     {"_connectedness_compute_Hinv_from_X", (DL_FUNC) &_connectedness_compute_Hinv_from_X, 18},
     {"_connectedness_cd_contrast_mu_mme_sparse", (DL_FUNC) &_connectedness_cd_contrast_mu_mme_sparse, 9},
+    {"_connectedness_cd_contrast_mu_mme_schur_sparse", (DL_FUNC) &_connectedness_cd_contrast_mu_mme_schur_sparse, 9},
     {NULL, NULL, 0}
 };
 
