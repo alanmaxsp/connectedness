@@ -176,11 +176,17 @@ Rcpp::List cd_contrast_mu_mme_sparse(
   progress_msg(verbose, "C++ CD/PEVD: finished full MME.");
 
   Eigen::SimplicialLDLT<SparseMatrix<double>> solverMME;
-  progress_msg(verbose, "C++ CD/PEVD: starting MME factorization...");
-  solverMME.compute(MME);
-  progress_msg(verbose, "C++ CD/PEVD: finished MME factorization.");
+  progress_msg(verbose, "C++ CD/PEVD: analyzing MME sparsity pattern...");
+  solverMME.analyzePattern(MME);
   if (solverMME.info() != Eigen::Success)
-    Rcpp::stop("Sparse factorization of MME failed. Check collinearity in X or definiteness of the system.");
+    Rcpp::stop("Sparse symbolic analysis of MME failed. Check the MME sparsity pattern.");
+  progress_msg(verbose, "C++ CD/PEVD: finished MME sparsity analysis.");
+
+  progress_msg(verbose, "C++ CD/PEVD: starting numeric MME factorization...");
+  solverMME.factorize(MME);
+  if (solverMME.info() != Eigen::Success)
+    Rcpp::stop("Sparse numeric factorization of MME failed. Check collinearity in X or definiteness of the system.");
+  progress_msg(verbose, "C++ CD/PEVD: finished numeric MME factorization.");
 
   // Solve K * B indirectly from Kinv * Y = B.
   // Kinv may be effectively dense (e.g. Ginv) or mixed sparse/dense (e.g. Hinv),
@@ -201,11 +207,17 @@ Rcpp::List cd_contrast_mu_mme_sparse(
       Rcpp::stop("Dense factorization of Kinv failed.");
     progress_msg(verbose, "C++ CD/PEVD: finished dense Kinv factorization.");
   } else {
-    progress_msg(verbose, "C++ CD/PEVD: starting sparse Kinv factorization...");
-    solverKinv_sparse.compute(Kinv);
+    progress_msg(verbose, "C++ CD/PEVD: analyzing sparse Kinv pattern...");
+    solverKinv_sparse.analyzePattern(Kinv);
     if (solverKinv_sparse.info() != Eigen::Success)
-      Rcpp::stop("Sparse factorization of Kinv failed.");
-    progress_msg(verbose, "C++ CD/PEVD: finished sparse Kinv factorization.");
+      Rcpp::stop("Sparse symbolic analysis of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD: finished sparse Kinv pattern analysis.");
+
+    progress_msg(verbose, "C++ CD/PEVD: starting sparse Kinv numeric factorization...");
+    solverKinv_sparse.factorize(Kinv);
+    if (solverKinv_sparse.info() != Eigen::Success)
+      Rcpp::stop("Sparse numeric factorization of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD: finished sparse Kinv numeric factorization.");
   }
 
   progress_msg(verbose, "C++ CD/PEVD: aggregating by MU and solving blocks...");
@@ -433,11 +445,17 @@ Rcpp::List cd_contrast_mu_mme_schur_sparse(
   progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu.");
 
   Eigen::SimplicialLDLT<SparseMatrix<double>> solverCuu;
-  progress_msg(verbose, "C++ CD/PEVD Schur: starting Cuu factorization...");
-  solverCuu.compute(Cuu);
-  progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu factorization.");
+  progress_msg(verbose, "C++ CD/PEVD Schur: analyzing Cuu sparsity pattern...");
+  solverCuu.analyzePattern(Cuu);
   if (solverCuu.info() != Eigen::Success)
-    Rcpp::stop("Schur backend: sparse factorization of Cuu failed.");
+    Rcpp::stop("Schur backend: sparse symbolic analysis of Cuu failed.");
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu sparsity analysis.");
+
+  progress_msg(verbose, "C++ CD/PEVD Schur: starting numeric Cuu factorization...");
+  solverCuu.factorize(Cuu);
+  if (solverCuu.info() != Eigen::Success)
+    Rcpp::stop("Schur backend: sparse numeric factorization of Cuu failed.");
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished numeric Cuu factorization.");
 
   MatrixXd W;
   LDLT<MatrixXd> solverS;
@@ -480,11 +498,17 @@ Rcpp::List cd_contrast_mu_mme_schur_sparse(
       Rcpp::stop("Dense factorization of Kinv failed.");
     progress_msg(verbose, "C++ CD/PEVD Schur: finished dense Kinv factorization.");
   } else {
-    progress_msg(verbose, "C++ CD/PEVD Schur: starting sparse Kinv factorization...");
-    solverKinv_sparse.compute(Kinv);
+    progress_msg(verbose, "C++ CD/PEVD Schur: analyzing sparse Kinv pattern...");
+    solverKinv_sparse.analyzePattern(Kinv);
     if (solverKinv_sparse.info() != Eigen::Success)
-      Rcpp::stop("Sparse factorization of Kinv failed.");
-    progress_msg(verbose, "C++ CD/PEVD Schur: finished sparse Kinv factorization.");
+      Rcpp::stop("Sparse symbolic analysis of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished sparse Kinv pattern analysis.");
+
+    progress_msg(verbose, "C++ CD/PEVD Schur: starting sparse Kinv numeric factorization...");
+    solverKinv_sparse.factorize(Kinv);
+    if (solverKinv_sparse.info() != Eigen::Success)
+      Rcpp::stop("Sparse numeric factorization of Kinv failed.");
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished sparse Kinv numeric factorization.");
   }
 
   progress_msg(verbose, "C++ CD/PEVD Schur: aggregating by MU and solving blocks...");
