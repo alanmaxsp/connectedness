@@ -7,6 +7,13 @@ using Eigen::SparseMatrix;
 using Eigen::Triplet;
 using Eigen::LDLT;
 
+typedef SparseMatrix<double> SpMat;
+typedef Eigen::SimplicialLDLT<
+  SpMat,
+  Eigen::Lower,
+  Eigen::NaturalOrdering<int>
+> NaturalSparseLDLT;
+
 static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, double v) {
   if (v != 0.0) tr.emplace_back(i, j, v);
 }
@@ -14,6 +21,20 @@ static inline void add_trip(std::vector<Triplet<double>>& tr, int i, int j, doub
 static inline void progress_msg(bool verbose, const std::string& msg) {
   if (verbose) {
     Rcpp::Rcout << msg << std::endl;
+  }
+}
+
+static inline void progress_sparse_summary(
+    bool verbose,
+    const std::string& label,
+    const SpMat& mat
+) {
+  if (verbose) {
+    Rcpp::Rcout << label
+                << " dim = " << mat.rows() << " x " << mat.cols()
+                << ", nnz = " << mat.nonZeros()
+                << ", compressed = " << (mat.isCompressed() ? "true" : "false")
+                << std::endl;
   }
 }
 
@@ -196,7 +217,7 @@ Rcpp::List cd_contrast_mu_mme_sparse(
     static_cast<double>(static_cast<long double>(N) * static_cast<long double>(N));
   const bool use_dense_kinv_solver = (kinv_density > 0.20 && N <= 25000);
 
-  Eigen::SimplicialLDLT<SparseMatrix<double>> solverKinv_sparse;
+  NaturalSparseLDLT solverKinv_sparse;
   LDLT<MatrixXd> solverKinv_dense;
 
   if (use_dense_kinv_solver) {
@@ -207,11 +228,12 @@ Rcpp::List cd_contrast_mu_mme_sparse(
       Rcpp::stop("Dense factorization of Kinv failed.");
     progress_msg(verbose, "C++ CD/PEVD: finished dense Kinv factorization.");
   } else {
-    progress_msg(verbose, "C++ CD/PEVD: analyzing sparse Kinv pattern...");
+    progress_sparse_summary(verbose, "C++ CD/PEVD: Kinv", Kinv);
+    progress_msg(verbose, "C++ CD/PEVD: analyzing sparse Kinv pattern with NaturalOrdering...");
     solverKinv_sparse.analyzePattern(Kinv);
     if (solverKinv_sparse.info() != Eigen::Success)
       Rcpp::stop("Sparse symbolic analysis of Kinv failed.");
-    progress_msg(verbose, "C++ CD/PEVD: finished sparse Kinv pattern analysis.");
+    progress_msg(verbose, "C++ CD/PEVD: finished sparse Kinv pattern analysis with NaturalOrdering.");
 
     progress_msg(verbose, "C++ CD/PEVD: starting sparse Kinv numeric factorization...");
     solverKinv_sparse.factorize(Kinv);
@@ -444,12 +466,13 @@ Rcpp::List cd_contrast_mu_mme_schur_sparse(
   Cuu.makeCompressed();
   progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu.");
 
-  Eigen::SimplicialLDLT<SparseMatrix<double>> solverCuu;
-  progress_msg(verbose, "C++ CD/PEVD Schur: analyzing Cuu sparsity pattern...");
+  NaturalSparseLDLT solverCuu;
+  progress_sparse_summary(verbose, "C++ CD/PEVD Schur: Cuu", Cuu);
+  progress_msg(verbose, "C++ CD/PEVD Schur: analyzing Cuu sparsity pattern with NaturalOrdering...");
   solverCuu.analyzePattern(Cuu);
   if (solverCuu.info() != Eigen::Success)
     Rcpp::stop("Schur backend: sparse symbolic analysis of Cuu failed.");
-  progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu sparsity analysis.");
+  progress_msg(verbose, "C++ CD/PEVD Schur: finished Cuu sparsity analysis with NaturalOrdering.");
 
   progress_msg(verbose, "C++ CD/PEVD Schur: starting numeric Cuu factorization...");
   solverCuu.factorize(Cuu);
@@ -487,7 +510,7 @@ Rcpp::List cd_contrast_mu_mme_schur_sparse(
     static_cast<double>(static_cast<long double>(N) * static_cast<long double>(N));
   const bool use_dense_kinv_solver = (kinv_density > 0.20 && N <= 25000);
 
-  Eigen::SimplicialLDLT<SparseMatrix<double>> solverKinv_sparse;
+  NaturalSparseLDLT solverKinv_sparse;
   LDLT<MatrixXd> solverKinv_dense;
 
   if (use_dense_kinv_solver) {
@@ -498,11 +521,12 @@ Rcpp::List cd_contrast_mu_mme_schur_sparse(
       Rcpp::stop("Dense factorization of Kinv failed.");
     progress_msg(verbose, "C++ CD/PEVD Schur: finished dense Kinv factorization.");
   } else {
-    progress_msg(verbose, "C++ CD/PEVD Schur: analyzing sparse Kinv pattern...");
+    progress_sparse_summary(verbose, "C++ CD/PEVD Schur: Kinv", Kinv);
+    progress_msg(verbose, "C++ CD/PEVD Schur: analyzing sparse Kinv pattern with NaturalOrdering...");
     solverKinv_sparse.analyzePattern(Kinv);
     if (solverKinv_sparse.info() != Eigen::Success)
       Rcpp::stop("Sparse symbolic analysis of Kinv failed.");
-    progress_msg(verbose, "C++ CD/PEVD Schur: finished sparse Kinv pattern analysis.");
+    progress_msg(verbose, "C++ CD/PEVD Schur: finished sparse Kinv pattern analysis with NaturalOrdering.");
 
     progress_msg(verbose, "C++ CD/PEVD Schur: starting sparse Kinv numeric factorization...");
     solverKinv_sparse.factorize(Kinv);
