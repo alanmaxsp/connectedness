@@ -29,6 +29,8 @@ compute_connectedness(
   year_col = NULL,
   year_window = NULL,
   min_records_per_year = 10,
+  dry_run = FALSE,
+  max_mme_dim = 500000L,
   verbose = TRUE
 )
 }
@@ -114,6 +116,14 @@ filtering is applied.}
 MU-year combination for a year to be considered valid when computing
 temporal overlap. Only used when \code{year_window} is not \code{NULL}.}
 
+\item{dry_run}{Logical. If \code{TRUE}, return problem-size diagnostics before the
+final MME solve instead of computing connectedness metrics.}
+
+\item{max_mme_dim}{Positive integer or \code{Inf}. Maximum allowed dimension of
+the full MME system (\code{nrow(rel_matrix) + ncol(fixed_effects)}) before the
+final sparse direct solve is attempted. Set to \code{Inf} to disable this safety
+check.}
+
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
 \value{
@@ -133,6 +143,8 @@ matrix used in the analysis.}
 or \code{NULL} if no temporal filtering was requested.}
 \item{call}{The matched function call.}
 }
+If \code{dry_run = TRUE}, the function returns a diagnostics list instead of a
+connectedness result.
 }
 \description{
 Computes connectedness between management units (MUs) under the contrast

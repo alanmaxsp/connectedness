@@ -67,6 +67,12 @@
 #' @param min_records_per_year Integer giving the minimum number of records per
 #'   MU-year combination for a year to be considered valid when computing
 #'   temporal overlap. Only used when `year_window` is not `NULL`.
+#' @param dry_run Logical. If `TRUE`, return problem-size diagnostics before the
+#'   final MME solve instead of computing connectedness metrics.
+#' @param max_mme_dim Positive integer or `Inf`. Maximum allowed dimension of
+#'   the full MME system (`nrow(rel_matrix) + ncol(fixed_effects)`) before the
+#'   final sparse direct solve is attempted. Set to `Inf` to disable this safety
+#'   check.
 #' @param verbose Logical. If `TRUE`, progress messages are printed.
 #'
 #' @return An object of class `"connectedness"`, which is a list with:
@@ -85,6 +91,8 @@
 #'     or `NULL` if no temporal filtering was requested.}
 #'   \item{call}{The matched function call.}
 #' }
+#' If `dry_run = TRUE`, the function returns a diagnostics list instead of a
+#' connectedness result.
 #'
 #' @details
 #' For each pair of management units \eqn{(i, j)}, the contrast assigns weight
@@ -172,6 +180,8 @@ compute_connectedness <- function(
     year_col             = NULL,
     year_window          = NULL,
     min_records_per_year = 10,
+    dry_run              = FALSE,
+    max_mme_dim          = 500000L,
     verbose              = TRUE
 ) {
 
@@ -203,6 +213,13 @@ compute_connectedness <- function(
       is.na(min_records_per_year) || min_records_per_year < 1 ||
       min_records_per_year != as.integer(min_records_per_year)) {
     stop("'min_records_per_year' must be a single positive integer.")
+  }
+  if (!is.logical(dry_run) || length(dry_run) != 1L || is.na(dry_run)) {
+    stop("'dry_run' must be TRUE or FALSE.")
+  }
+  if ((!is.numeric(max_mme_dim) && !is.integer(max_mme_dim)) || length(max_mme_dim) != 1L ||
+      is.na(max_mme_dim) || max_mme_dim <= 0) {
+    stop("'max_mme_dim' must be a single positive number or Inf.")
   }
 
   if (!is.null(year_window)) {
@@ -416,6 +433,25 @@ compute_connectedness <- function(
   }
   Xsp <- Matrix::sparse.model.matrix(fixed_formula, data = data_window)
 
+  diagnostics <- .connectedness_diagnostics(
+    relationship = relationship,
+    rel_matrix = rel_matrix,
+    fixed_matrix = Xsp,
+    data_window = data_window,
+    mu_levels = mu_levels,
+    target = target,
+    year_window = year_window,
+    scale_pevd = scale_pevd,
+    call = cl
+  )
+
+  if (dry_run) {
+    if (verbose) .print_connectedness_diagnostics(diagnostics)
+    return(invisible(diagnostics))
+  }
+
+  .check_connectedness_problem_size(diagnostics, max_mme_dim)
+
   id_rec <- as.integer(data_window$.new_id)
 
   if (verbose) {
@@ -456,6 +492,94 @@ compute_connectedness <- function(
 
   if (verbose) message("Done.")
   invisible(out)
+}
+
+
+.connectedness_diagnostics <- function(relationship,
+                                       rel_matrix,
+                                       fixed_matrix,
+                                       data_window,
+                                       mu_levels,
+                                       target,
+                                       year_window,
+                                       scale_pevd,
+                                       call) {
+
+  rel_n <- nrow(rel_matrix)
+  rel_nnz <- length(rel_matrix@x)
+  x_nnz <- length(fixed_matrix@x)
+  p <- ncol(fixed_matrix)
+  mme_dim <- rel_n + p
+  n_records <- nrow(data_window)
+  n_target <- sum(target)
+  n_mu <- length(mu_levels)
+  rel_density <- rel_nnz / (as.numeric(rel_n) * as.numeric(rel_n))
+
+  # This is only the explicit sparse MME storage footprint before symbolic
+  # factorization. Sparse direct factorization can require substantially more
+  # memory depending on fill-in, so this is a lower-bound diagnostic.
+  explicit_mme_nnz_lower_bound <- rel_nnz + 2 * x_nnz + p
+  explicit_mme_storage_mb_lower_bound <-
+    explicit_mme_nnz_lower_bound * (8 + 4) / 1024^2
+
+  structure(
+    list(
+      relationship = relationship,
+      n_relationship = rel_n,
+      n_records = n_records,
+      n_target = n_target,
+      n_management_units = n_mu,
+      n_fixed_effect_columns = p,
+      mme_dim = mme_dim,
+      relationship_nonzeros = rel_nnz,
+      relationship_density = rel_density,
+      fixed_effect_nonzeros = x_nnz,
+      explicit_mme_nonzeros_lower_bound = explicit_mme_nnz_lower_bound,
+      explicit_mme_storage_mb_lower_bound = explicit_mme_storage_mb_lower_bound,
+      year_window = year_window,
+      scale_pevd = scale_pevd,
+      call = call
+    ),
+    class = "connectedness_diagnostics"
+  )
+}
+
+.check_connectedness_problem_size <- function(diagnostics, max_mme_dim) {
+
+  if (is.finite(max_mme_dim) && diagnostics$mme_dim > max_mme_dim) {
+    stop(sprintf(
+      paste0(
+        "The connectedness MME system is too large for the default safe solve limit: ",
+        "dimension p + N = %d exceeds max_mme_dim = %d. ",
+        "Run compute_connectedness(..., dry_run = TRUE) to inspect problem-size diagnostics. ",
+        "Then reduce the analysis scope, provide a smaller user-defined relationship matrix, ",
+        "or set max_mme_dim = Inf to attempt the solve at your own risk."
+      ),
+      diagnostics$mme_dim,
+      as.integer(max_mme_dim)
+    ))
+  }
+
+  invisible(TRUE)
+}
+
+.print_connectedness_diagnostics <- function(x) {
+  message("Connectedness dry-run diagnostics:")
+  message(sprintf("  relationship              : %s", x$relationship))
+  message(sprintf("  relationship dimension    : %d", x$n_relationship))
+  message(sprintf("  records                   : %d", x$n_records))
+  message(sprintf("  target animals            : %d", x$n_target))
+  message(sprintf("  management units          : %d", x$n_management_units))
+  message(sprintf("  fixed-effect columns      : %d", x$n_fixed_effect_columns))
+  message(sprintf("  MME dimension (p + N)     : %d", x$mme_dim))
+  message(sprintf("  relationship nonzeros     : %d", x$relationship_nonzeros))
+  message(sprintf("  relationship density      : %.6g", x$relationship_density))
+  message(sprintf("  fixed-effect nonzeros     : %d", x$fixed_effect_nonzeros))
+  message(sprintf(
+    "  explicit MME storage lower bound: %.1f MB",
+    x$explicit_mme_storage_mb_lower_bound
+  ))
+  invisible(x)
 }
 
 .compute_overlap <- function(data_window, mu_col, year_col, min_records_per_year) {
