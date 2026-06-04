@@ -28,7 +28,12 @@ compute_connectedness(
   scale_pevd = FALSE,
   year_col = NULL,
   year_window = NULL,
-  min_records_per_year = 10,
+  min_records_per_year = NULL,
+  dry_run = FALSE,
+  max_mme_dim = 500000L,
+  mme_backend = c("schur", "full_mme"),
+  schur_solver = c("auto", "cholmod", "dense", "eigen_sparse"),
+  schur_block_size = 16L,
   verbose = TRUE
 )
 }
@@ -74,8 +79,9 @@ to row/column indices in the inverse relationship matrix actually used in
 the analysis. Required for \code{relationship = "custom"}; optional otherwise if
 it can be derived internally.}
 
-\item{rel_matrix}{Optional user-supplied inverse relationship matrix of class
-\code{dgCMatrix}. Used only when \code{relationship = "custom"}.}
+\item{rel_matrix}{Optional user-supplied inverse relationship matrix. Sparse
+Matrix objects are kept sparse; dense matrices are kept dense for Schur solver
+selection when \code{relationship = "custom"}.}
 
 \item{maf_threshold}{Minor allele frequency threshold used when building
 \code{Ginv} or \code{Hinv} internally.}
@@ -110,9 +116,35 @@ Required when \code{year_window} is specified.}
 window to retain, for example \code{c(2003, 2022)}. If \code{NULL}, no temporal
 filtering is applied.}
 
-\item{min_records_per_year}{Integer giving the minimum number of records per
-MU-year combination for a year to be considered valid when computing
-temporal overlap. Only used when \code{year_window} is not \code{NULL}.}
+\item{min_records_per_year}{Optional integer. If \code{year_window} is provided,
+this defines the minimum number of records required for an MU to be
+considered active in a given year. MUs are retained in the connectedness
+analysis only if they are active in at least 50\% of the years in
+\code{year_window}. If \code{NULL}, no temporal activity filter is applied.}
+
+\item{dry_run}{Logical. If \code{TRUE}, return problem-size diagnostics before the
+final MME solve instead of computing connectedness metrics.}
+
+\item{max_mme_dim}{Positive integer or \code{Inf}. Maximum allowed dimension of
+the full MME system (\code{nrow(rel_matrix) + ncol(fixed_effects)}) before the
+final sparse direct solve is attempted. Set to \code{Inf} to disable this safety
+check. This safety check is applied only when \code{mme_backend = "full_mme"}.}
+
+\item{mme_backend}{Character string indicating the numerical backend used for
+the MME solve. \code{"schur"} (the default) factorizes the animal block and
+absorbs fixed effects through a Schur complement. \code{"full_mme"} builds and
+factorizes the full MME system. The two backends are algebraically equivalent
+up to floating-point roundoff.}
+
+\item{schur_solver}{Character string indicating the numerical solver used when
+\code{mme_backend = "schur"}. Options are \code{"auto"}, \code{"cholmod"},
+\code{"dense"}, and \code{"eigen_sparse"}. \code{"cholmod"} uses CHOLMOD through
+the Matrix package for sparse kernels; \code{"dense"} uses a dense compiled solver;
+\code{"eigen_sparse"} keeps the Eigen sparse solver for diagnostics and small
+comparisons.}
+
+\item{schur_block_size}{Positive integer. Number of MU right-hand-side columns
+solved per block in the Schur backend.}
 
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
@@ -128,11 +160,19 @@ kernel used in the analysis.}
 \item{n_target}{Named numeric vector. Number of target animals per MU.}
 \item{relationship}{Character string indicating the inverse relationship
 matrix used in the analysis.}
+\item{mme_backend}{Character string indicating the numerical backend used
+for the MME solve.}
+\item{schur_solver}{Character string indicating the selected Schur solver, or
+\code{NA} when \code{mme_backend = "full_mme"}.}
 \item{year_window}{The time window used, or \code{NULL} if no filtering was applied.}
 \item{overlap}{A data frame describing temporal overlap between MU pairs,
 or \code{NULL} if no temporal filtering was requested.}
+\item{activity_summary}{A data frame describing the temporal activity filter
+applied to MUs, or \code{NULL} if no activity filter was applied.}
 \item{call}{The matched function call.}
 }
+If \code{dry_run = TRUE}, the function returns a diagnostics list instead of a
+connectedness result.
 }
 \description{
 Computes connectedness between management units (MUs) under the contrast
@@ -156,9 +196,21 @@ each unit.
 the kernel actually used in the analysis. The object component \code{qK} therefore
 refers generically to the denominator under \code{A}, \code{G}, \code{H}, or a custom kernel.
 
-When a time window is specified, the function also reports the years in which
-MU pairs overlap according to the observed records and the chosen minimum
-record threshold.
+When a time window is specified and \code{min_records_per_year} is not \code{NULL},
+MUs are first filtered by temporal activity before \code{CD}, \code{PEVD}, \code{qK}, and
+\code{qC} are computed. The function also reports the years in which retained MU
+pairs overlap.
+
+The \code{"full_mme"} backend directly factorizes the full MME matrix
+\code{[X'X X'Z; Z'X Z'Z + lambda Kinv]}. The \code{"schur"} backend avoids this full
+factorization by factorizing \code{Cuu = Z'Z + lambda Kinv} and using the fixed-
+effect Schur complement \code{S = X'X - X'Z Cuu^{-1} Z'X}.
+
+The Schur formulation is algebraically independent of the relationship matrix
+type. With \code{schur_solver = "auto"}, sparse inverse kernels such as \code{Ainv}
+are solved through CHOLMOD via the Matrix package, while dense kernels such as
+\code{Ginv} are solved through a dense compiled backend. The \code{"eigen_sparse"}
+solver is retained mainly for diagnostics and small-scale comparisons.
 }
 \examples{
 \dontrun{
