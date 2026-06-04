@@ -159,6 +159,31 @@ res_time <- compute_connectedness(
 plot(res_time, which = "overlap")
 ```
 
+### Diagnóstico de tamaño del problema
+
+Para análisis grandes, puede inspeccionarse el tamaño del sistema antes de
+resolver las MME:
+
+```r
+diag <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree,
+  dry_run       = TRUE
+)
+```
+
+Por defecto, `compute_connectedness()` evita iniciar la resolución directa si la
+dimensión del sistema MME supera `max_mme_dim = 500000`, para devolver un error
+informativo en lugar de arriesgar una caída de R por falta de memoria. Este
+límite puede desactivarse con `max_mme_dim = Inf` bajo responsabilidad del
+usuario.
+
 ### Funciones principales
 
 * `compute_connectedness()`
@@ -330,6 +355,29 @@ res_time <- compute_connectedness(
 
 plot(res_time, which = "overlap")
 ```
+
+### Problem-size diagnostics
+
+For large analyses, you can inspect the system size before solving the MME:
+
+```r
+diag <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree,
+  dry_run       = TRUE
+)
+```
+
+By default, `compute_connectedness()` avoids starting the direct solve when the
+MME system dimension exceeds `max_mme_dim = 500000`, so it can return an
+informative error instead of risking an R crash due to memory pressure. You can
+disable this limit with `max_mme_dim = Inf` at your own risk.
 
 ### Main functions
 
