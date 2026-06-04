@@ -32,6 +32,12 @@ print.connectedness <- function(x, digits = 3, ...) {
   if (!is.null(x$relationship)) {
     cat("Relationship matrix:", x$relationship, "\n")
   }
+  if (!is.null(x$mme_backend)) {
+    cat("MME backend        :", x$mme_backend, "\n")
+  }
+  if (!is.null(x$schur_solver) && !is.na(x$schur_solver)) {
+    cat("Schur solver       :", x$schur_solver, "\n")
+  }
 
   if (!is.null(x$year_window)) {
     cat(sprintf("Year window        : [%d, %d]\n", x$year_window[1], x$year_window[2]))
