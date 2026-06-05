@@ -138,10 +138,13 @@ plot(res_A, which = "all")
 
 ### Restricción temporal opcional
 
-La conectividad también puede evaluarse dentro de una ventana temporal
-restringida. Si se define `min_records_per_year`, solo se conservan las unidades
-de manejo activas con al menos ese número de registros en al menos el 50% de los
-años de la ventana:
+La conectividad también puede enfocarse en unidades de manejo activas dentro de
+una ventana temporal. Si se define `min_records_per_year`, la ventana se usa para
+seleccionar las MUs activas que se reportan: una MU debe tener al menos ese
+número de registros en al menos el 50% de los años de la ventana. Las métricas
+CD/PEVD para esas MUs se calculan usando todos los registros disponibles en
+`data`, de modo que las MUs no reportadas pueden seguir aportando información al
+sistema mixto:
 
 ```r
 res_time <- compute_connectedness(
@@ -364,9 +367,12 @@ plot(res_A, which = "all")
 
 ### Optional temporal restriction
 
-Connectedness can also be evaluated within a restricted time window. If
-`min_records_per_year` is set, only management units active with at least that
-many records in at least 50% of the years in the window are retained:
+Connectedness can also be focused on management units active within a time
+window. If `min_records_per_year` is set, the window is used to select the active
+MUs to report: an MU must have at least that many records in at least 50% of the
+years in the window. CD/PEVD for those MUs are computed using all available
+records in `data`, so non-reported MUs can still contribute information to the
+mixed-model system:
 
 ```r
 res_time <- compute_connectedness(

@@ -63,13 +63,14 @@
 #' @param year_col Optional character string naming the year column in `data`.
 #'   Required when `year_window` is specified.
 #' @param year_window Optional numeric vector of length 2 specifying the time
-#'   window to retain, for example `c(2003, 2022)`. If `NULL`, no temporal
-#'   filtering is applied.
+#'   window used to identify active MUs, for example `c(2016, 2025)`. If
+#'   `NULL`, no temporal activity selection is applied.
 #' @param min_records_per_year Optional integer. If `year_window` is provided,
 #'   this defines the minimum number of records required for an MU to be
-#'   considered active in a given year. MUs are retained in the connectedness
-#'   analysis only if they are active in at least 50% of the years in
-#'   `year_window`. If `NULL`, no temporal activity filter is applied.
+#'   considered active in a given year. MUs are selected for reporting if they
+#'   are active in at least 50% of the years in `year_window`. Connectedness
+#'   metrics for the selected MUs are then computed using all available records
+#'   in `data`. If `NULL`, no minimum-record activity threshold is applied.
 #' @param dry_run Logical. If `TRUE`, return problem-size diagnostics before the
 #'   final MME solve instead of computing connectedness metrics.
 #' @param max_mme_dim Positive integer or `Inf`. Maximum allowed dimension of
@@ -106,9 +107,12 @@
 #'     for the MME solve.}
 #'   \item{schur_solver}{Character string indicating the selected Schur solver,
 #'     or `NA` when `mme_backend = "full_mme"`.}
-#'   \item{year_window}{The time window used, or `NULL` if no filtering was applied.}
+#'   \item{year_window}{The time window used to select active MUs, or `NULL` if no temporal selection was applied.}
+#'   \item{temporal_mode}{Internal temporal mode used for the analysis.}
+#'   \item{report_mus}{Character vector of MUs selected for reporting in `CD`,
+#'     `PEVD`, `qK`, and `qC`.}
 #'   \item{overlap}{A data frame describing temporal overlap between MU pairs,
-#'     or `NULL` if no temporal filtering was requested.}
+#'     or `NULL` if no temporal selection was requested.}
 #'   \item{activity_summary}{A data frame describing the temporal activity filter
 #'     applied to MUs, or `NULL` if no activity filter was applied.}
 #'   \item{call}{The matched function call.}
@@ -128,20 +132,11 @@
 #' refers generically to the denominator under `A`, `G`, `H`, or a custom kernel.
 #'
 #' When a time window is specified and `min_records_per_year` is not `NULL`,
-#' MUs are first filtered by temporal activity before `CD`, `PEVD`, `qK`, and
-#' `qC` are computed. The function also reports the years in which retained MU
-#' pairs overlap.
-#'
-#' The `"full_mme"` backend directly factorizes the full MME matrix
-#' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
-#' factorization by factorizing `Cuu = Z'Z + lambda Kinv` and using the fixed-
-#' effect Schur complement `S = X'X - X'Z Cuu^{-1} Z'X`.
-#'
-#' The Schur formulation is algebraically independent of the relationship matrix
-#' type. With `schur_solver = "auto"`, sparse inverse kernels such as `Ainv` are
-#' solved through CHOLMOD via the Matrix package, while dense kernels such as
-#' `Ginv` are solved through a dense compiled backend. The `"eigen_sparse"`
-#' solver is retained mainly for diagnostics and small-scale comparisons.
+#' the window is used to identify active MUs to be reported. By default, the
+#' connectedness metrics among those MUs are computed using all available
+#' records in `data`, preserving information from non-reported MUs that may
+#' contribute indirectly to connectedness. The function also reports temporal
+#' overlap among selected MUs inside the activity window.
 #'
 #' The `"full_mme"` backend directly factorizes the full MME matrix
 #' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
@@ -225,6 +220,7 @@ compute_connectedness <- function(
     year_col             = NULL,
     year_window          = NULL,
     min_records_per_year = NULL,
+    temporal_mode        = c("select_mus", "filter_records"),
     dry_run              = FALSE,
     max_mme_dim          = 500000L,
     mme_backend          = c("schur", "full_mme"),
@@ -237,6 +233,7 @@ compute_connectedness <- function(
   relationship <- match.arg(relationship)
   mme_backend <- match.arg(mme_backend)
   schur_solver <- match.arg(schur_solver)
+  temporal_mode <- match.arg(temporal_mode)
 
   if (!is.data.frame(data)) {
     stop("'data' must be a data frame.")
@@ -447,26 +444,32 @@ compute_connectedness <- function(
   overlap_dt <- NULL
   activity_summary <- NULL
   n_mus_before_activity_filter <- NA_integer_
+  activity_mus <- NULL
+  data_activity <- NULL
+  n_records_activity_window <- NA_integer_
 
   if (!is.null(year_window)) {
     data[[year_col]] <- as.integer(data[[year_col]])
     Y1 <- year_window[1]
     Y2 <- year_window[2]
 
-    if (verbose) message(sprintf("Filtering records to year window [%d, %d]...", Y1, Y2))
-    data_window <- data[data[[year_col]] >= Y1 & data[[year_col]] <= Y2, ]
+    if (verbose) {
+      message(sprintf("Using year window [%d, %d] to identify active MUs...", Y1, Y2))
+    }
+    data_activity <- data[data[[year_col]] >= Y1 & data[[year_col]] <= Y2, ]
 
-    if (nrow(data_window) == 0) {
+    if (nrow(data_activity) == 0) {
       stop("No records remain after applying 'year_window'. Check the year range.")
     }
 
-    n_mus_before_activity_filter <- length(unique(data_window[[mu_col]]))
+    n_records_activity_window <- nrow(data_activity)
+    n_mus_before_activity_filter <- length(unique(data_activity[[mu_col]]))
 
     if (!is.null(min_records_per_year)) {
       if (verbose) {
         message(sprintf(
           paste0(
-            "Applying temporal activity filter: MUs must have at least %d records/year ",
+            "Selecting MUs with at least %d records/year ",
             "in at least 50%% of the years in [%d, %d]..."
           ),
           min_records_per_year, Y1, Y2
@@ -474,48 +477,81 @@ compute_connectedness <- function(
       }
 
       activity <- .filter_active_mus(
-        data_window = data_window,
+        data_window = data_activity,
         mu_col = mu_col,
         year_col = year_col,
         year_window = year_window,
         min_records_per_year = min_records_per_year
       )
 
-      data_window <- activity$data_window
       activity_summary <- activity$activity_summary
+      activity_mus <- activity$eligible_mus
 
       if (verbose) {
         message(sprintf(
-          "Temporal activity filter retained %d MUs and excluded %d MUs.",
+          "Temporal activity selection retained %d MUs and excluded %d MUs.",
           length(activity$eligible_mus),
           length(activity$excluded_mus)
         ))
       }
+    } else {
+      activity_mus <- sort(unique(data_activity[[mu_col]]))
     }
 
-    overlap_dt <- .compute_overlap(data_window, mu_col, year_col, min_records_per_year)
+    data_activity_selected <- data_activity[
+      data_activity[[mu_col]] %in% activity_mus,
+      ,
+      drop = FALSE
+    ]
+
+    overlap_dt <- .compute_overlap(data_activity_selected, mu_col, year_col, min_records_per_year)
+
+    if (temporal_mode == "select_mus") {
+      data_window <- data
+      if (verbose) {
+        message(
+          "Connectedness will be computed using all records in 'data'; ",
+          "CD/PEVD will be reported for selected active MUs only."
+        )
+      }
+    } else if (temporal_mode == "filter_records") {
+      data_window <- data_activity_selected
+      if (verbose) {
+        message(
+          "Internal temporal_mode = 'filter_records': connectedness will be ",
+          "computed using only records inside the year window."
+        )
+      }
+    } else {
+      stop("Unsupported internal 'temporal_mode'.")
+    }
   } else {
     data_window <- data
   }
 
-  mu_levels <- sort(unique(data_window[[mu_col]]))
-  U <- length(mu_levels)
+  report_mus <- if (!is.null(year_window)) {
+    sort(as.character(activity_mus))
+  } else {
+    sort(unique(data_window[[mu_col]]))
+  }
+  U <- length(report_mus)
   if (U < 2) {
-    stop("At least 2 MUs with records are required to compute connectedness.")
+    stop("At least 2 selected MUs are required to compute connectedness.")
   }
 
-  mu_map <- stats::setNames(seq_along(mu_levels), mu_levels)
+  mu_map <- stats::setNames(seq_along(report_mus), report_mus)
 
   mu_animal <- integer(N)
   target    <- logical(N)
 
-  animal_mu <- unique(data_window[, c(".new_id", mu_col)])
+  data_target <- data_window[data_window[[mu_col]] %in% report_mus, , drop = FALSE]
+  animal_mu <- unique(data_target[, c(".new_id", mu_col)])
   mu_animal[animal_mu$.new_id] <- mu_map[animal_mu[[mu_col]]]
-  target[unique(data_window$.new_id)] <- TRUE
+  target[unique(data_target$.new_id)] <- TRUE
 
   tab_target <- table(mu_animal[target])
   if (verbose) {
-    message("Target animals per MU:")
+    message("Target animals per selected MU:")
     print(tab_target)
   }
 
@@ -535,7 +571,7 @@ compute_connectedness <- function(
     rel_matrix = rel_matrix,
     fixed_matrix = Xsp,
     data_window = data_window,
-    mu_levels = mu_levels,
+    mu_levels = report_mus,
     target = target,
     year_window = year_window,
     scale_pevd = scale_pevd,
@@ -546,6 +582,9 @@ compute_connectedness <- function(
     min_records_per_year = min_records_per_year,
     activity_summary = activity_summary,
     n_mus_before_activity_filter = n_mus_before_activity_filter,
+    temporal_mode = temporal_mode,
+    n_records_activity_window = n_records_activity_window,
+    n_mus_used_for_connectedness_records = length(unique(data_window[[mu_col]])),
     call = cl
   )
 
@@ -577,7 +616,7 @@ compute_connectedness <- function(
       target,
       sigma2a,
       sigma2e,
-      as.character(mu_levels),
+      as.character(report_mus),
       verbose,
       PACKAGE = "connectedness"
     )
@@ -598,7 +637,7 @@ compute_connectedness <- function(
         target = target,
         sigma2a = sigma2a,
         sigma2e = sigma2e,
-        mu_names = as.character(mu_levels),
+        mu_names = as.character(report_mus),
         block_size = schur_block_size,
         verbose = verbose
       )
@@ -621,7 +660,7 @@ compute_connectedness <- function(
         target,
         sigma2a,
         sigma2e,
-        as.character(mu_levels),
+        as.character(report_mus),
         schur_block_size,
         verbose,
         PACKAGE = "connectedness"
@@ -639,7 +678,7 @@ compute_connectedness <- function(
         target,
         sigma2a,
         sigma2e,
-        as.character(mu_levels),
+        as.character(report_mus),
         verbose,
         PACKAGE = "connectedness"
       )
@@ -666,6 +705,8 @@ compute_connectedness <- function(
       mme_backend   = mme_backend,
       schur_solver  = if (mme_backend == "schur") selected_schur_solver else NA_character_,
       year_window      = year_window,
+      temporal_mode    = temporal_mode,
+      report_mus       = report_mus,
       overlap          = overlap_dt,
       activity_summary = activity_summary,
       call             = cl
@@ -765,6 +806,9 @@ compute_connectedness <- function(
                                        min_records_per_year,
                                        activity_summary,
                                        n_mus_before_activity_filter,
+                                       temporal_mode,
+                                       n_records_activity_window,
+                                       n_mus_used_for_connectedness_records,
                                        call) {
 
   rel_n <- nrow(rel_matrix)
@@ -819,8 +863,12 @@ compute_connectedness <- function(
       matrix_storage = matrix_storage,
       n_relationship = rel_n,
       n_records = n_records,
+      n_records_activity_window = n_records_activity_window,
+      n_records_used_for_connectedness = n_records,
+      n_mus_used_for_connectedness_records = n_mus_used_for_connectedness_records,
       n_target = n_target,
       n_management_units = n_mu,
+      temporal_mode = temporal_mode,
       activity_filter_applied = activity_filter_applied,
       n_mus_before_activity_filter = n_mus_before_activity_filter,
       n_mus_after_activity_filter = n_mus_after_activity_filter,
@@ -880,9 +928,14 @@ compute_connectedness <- function(
   message(sprintf("  relationship              : %s", x$relationship))
   message(sprintf("  matrix storage            : %s", x$matrix_storage))
   message(sprintf("  relationship dimension    : %d", x$n_relationship))
-  message(sprintf("  records                   : %d", x$n_records))
+  message(sprintf("  temporal mode             : %s", x$temporal_mode))
+  message(sprintf("  records used for CD/PEVD  : %d", x$n_records_used_for_connectedness))
+  if (!is.na(x$n_records_activity_window)) {
+    message(sprintf("  records in activity window: %d", x$n_records_activity_window))
+  }
   message(sprintf("  target animals            : %d", x$n_target))
-  message(sprintf("  management units          : %d", x$n_management_units))
+  message(sprintf("  reported management units : %d", x$n_management_units))
+  message(sprintf("  MUs in connectedness data : %d", x$n_mus_used_for_connectedness_records))
   message(sprintf("  activity filter applied   : %s", x$activity_filter_applied))
   if (isTRUE(x$activity_filter_applied)) {
     message(sprintf("  MUs before activity filter: %d", x$n_mus_before_activity_filter))
