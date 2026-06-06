@@ -5,6 +5,7 @@
 #' @param ... Unused.
 #'
 #' @return The input object, invisibly.
+#' @method print connectedness
 #' @export
 print.connectedness <- function(x, digits = 3, ...) {
 

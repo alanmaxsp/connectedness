@@ -4,7 +4,7 @@
 \alias{print.connectedness}
 \title{Print a connectedness object}
 \usage{
-print.connectedness(x, digits = 3, ...)
+\method{print}{connectedness}(x, digits = 3, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"connectedness"}.}
