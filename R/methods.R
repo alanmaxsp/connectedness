@@ -42,8 +42,8 @@ print.connectedness <- function(x, digits = 3, ...) {
   if (!is.null(x$year_window)) {
     cat(sprintf("Year window        : [%d, %d]\n", x$year_window[1], x$year_window[2]))
   }
-  if (!is.null(x$temporal_mode)) {
-    cat("Temporal mode      :", x$temporal_mode, "\n")
+  if (!is.null(x$target_scope)) {
+    cat("Target scope       :", x$target_scope, "\n")
   }
   if (!is.null(x$activity_summary)) {
     n_in <- sum(x$activity_summary$eligible)

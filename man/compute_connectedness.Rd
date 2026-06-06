@@ -29,7 +29,7 @@ compute_connectedness(
   year_col = NULL,
   year_window = NULL,
   min_records_per_year = NULL,
-  temporal_mode = c("select_mus", "filter_records"),
+  target_scope = c("window", "selected_mus"),
   dry_run = FALSE,
   max_mme_dim = 500000L,
   mme_backend = c("schur", "full_mme"),
@@ -114,15 +114,22 @@ by \code{sigma2a} before being stored in the output object.}
 Required when \code{year_window} is specified.}
 
 \item{year_window}{Optional numeric vector of length 2 specifying the time
-window used to identify active MUs, for example \code{c(2016, 2025)}. If
-\code{NULL}, no temporal activity selection is applied.}
+window used to identify active MUs and, by default, target animals for the
+connectedness contrasts. For example, \code{c(2016, 2025)}. If \code{NULL}, no
+temporal activity selection is applied.}
 
-\item{min_records_per_year}{Optional integer. If \code{year_window} is provided,
-this defines the minimum number of records required for an MU to be
-considered active in a given year. MUs are selected for reporting if they
-are active in at least 50\% of the years in \code{year_window}. Connectedness
-metrics for the selected MUs are then computed using all available records
-in \code{data}. If \code{NULL}, no minimum-record activity threshold is applied.}
+\item{min_records_per_year}{Optional positive integer. If \code{year_window} is
+provided, this defines the minimum number of records required for an MU to
+be considered active in a given year. MUs are selected for reporting if they
+are active in at least 50\% of the years in \code{year_window}. If \code{NULL}, all
+MUs with records in the window are selected.}
+
+\item{target_scope}{Character string defining which animals from the selected
+MUs receive non-zero weights in the pairwise contrast. \code{"window"}
+(default) uses only animals from selected MUs with records inside
+\code{year_window} as target animals, while still fitting the MME with all
+records in \code{data}. \code{"selected_mus"} uses all animals from the selected
+MUs as target animals.}
 
 \item{dry_run}{Logical. If \code{TRUE}, return problem-size diagnostics before the
 final MME solve instead of computing connectedness metrics.}
@@ -167,7 +174,7 @@ for the MME solve.}
 \item{schur_solver}{Character string indicating the selected Schur solver, or
 \code{NA} when \code{mme_backend = "full_mme"}.}
 \item{year_window}{The time window used to select active MUs, or \code{NULL} if no temporal selection was applied.}
-\item{temporal_mode}{Internal temporal mode used for the analysis.}
+\item{target_scope}{Character string indicating which selected animals received non-zero contrast weights.}
 \item{report_mus}{Character vector of MUs selected for reporting in \code{CD}, \code{PEVD}, \code{qK}, and \code{qC}.}
 \item{overlap}{A data frame describing temporal overlap between MU pairs,
 or \code{NULL} if no temporal selection was requested.}
@@ -200,12 +207,25 @@ each unit.
 the kernel actually used in the analysis. The object component \code{qK} therefore
 refers generically to the denominator under \code{A}, \code{G}, \code{H}, or a custom kernel.
 
-When a time window is specified and \code{min_records_per_year} is not \code{NULL},
-the window is used to identify active MUs to be reported. By default, the
-connectedness metrics among those MUs are computed using all available
-records in \code{data}, preserving information from non-reported MUs that may
-contribute indirectly to connectedness. The function also reports temporal
-overlap among selected MUs inside the activity window.
+If \code{year_window} is supplied, connectedness is computed in two steps. First,
+the function identifies MUs of interest using the temporal activity criterion.
+Second, it computes CD and PEVD for contrasts among target animals from those
+MUs using the full set of records in \code{data}.
+
+With \code{target_scope = "window"} (default), the function answers: among
+animals recorded in the specified time window from active MUs, how connected
+are those MUs when evaluated using all information available in the system?
+With \code{target_scope = "selected_mus"}, the function answers: among MUs
+selected as active in the specified time window, how connected are those MUs
+when all animals from those MUs are used as targets and all information
+available in the system is used?
+
+The MME is always built from all records supplied in \code{data}. The temporal
+arguments determine the set of reported MUs and the set of animals receiving
+non-zero weights in the contrast vector. Under \code{target_scope = "window"},
+animals from a pair of MUs inside the window receive weights \code{1 / n_i} and
+\code{-1 / n_j}, respectively, whereas all other animals receive weight zero in
+the contrast but may still contribute information through the MME.
 
 The \code{"full_mme"} backend directly factorizes the full MME matrix
 \code{[X'X X'Z; Z'X Z'Z + lambda Kinv]}. The \code{"schur"} backend avoids this full

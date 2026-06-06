@@ -141,10 +141,10 @@ plot(res_A, which = "all")
 La conectividad también puede enfocarse en unidades de manejo activas dentro de
 una ventana temporal. Si se define `min_records_per_year`, la ventana se usa para
 seleccionar las MUs activas que se reportan: una MU debe tener al menos ese
-número de registros en al menos el 50% de los años de la ventana. Las métricas
-CD/PEVD para esas MUs se calculan usando todos los registros disponibles en
-`data`, de modo que las MUs no reportadas pueden seguir aportando información al
-sistema mixto:
+número de registros en al menos el 50% de los años de la ventana. Por defecto
+(`target_scope = "window"`), las métricas CD/PEVD usan como animales target a
+los animales de esas MUs dentro de la ventana, pero el MME se ajusta con todos
+los registros disponibles en `data`:
 
 ```r
 res_time <- compute_connectedness(
@@ -370,9 +370,9 @@ plot(res_A, which = "all")
 Connectedness can also be focused on management units active within a time
 window. If `min_records_per_year` is set, the window is used to select the active
 MUs to report: an MU must have at least that many records in at least 50% of the
-years in the window. CD/PEVD for those MUs are computed using all available
-records in `data`, so non-reported MUs can still contribute information to the
-mixed-model system:
+years in the window. By default (`target_scope = "window"`), CD/PEVD use animals
+from those MUs inside the window as targets, while the MME is fitted with all
+available records in `data`:
 
 ```r
 res_time <- compute_connectedness(

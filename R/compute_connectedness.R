@@ -63,14 +63,20 @@
 #' @param year_col Optional character string naming the year column in `data`.
 #'   Required when `year_window` is specified.
 #' @param year_window Optional numeric vector of length 2 specifying the time
-#'   window used to identify active MUs, for example `c(2016, 2025)`. If
-#'   `NULL`, no temporal activity selection is applied.
-#' @param min_records_per_year Optional integer. If `year_window` is provided,
-#'   this defines the minimum number of records required for an MU to be
-#'   considered active in a given year. MUs are selected for reporting if they
-#'   are active in at least 50% of the years in `year_window`. Connectedness
-#'   metrics for the selected MUs are then computed using all available records
-#'   in `data`. If `NULL`, no minimum-record activity threshold is applied.
+#'   window used to identify active MUs and, by default, target animals for the
+#'   connectedness contrasts. For example, `c(2016, 2025)`. If `NULL`, no
+#'   temporal activity selection is applied.
+#' @param min_records_per_year Optional positive integer. If `year_window` is
+#'   provided, this defines the minimum number of records required for an MU to
+#'   be considered active in a given year. MUs are selected for reporting if they
+#'   are active in at least 50% of the years in `year_window`. If `NULL`, all
+#'   MUs with records in the window are selected.
+#' @param target_scope Character string defining which animals from the selected
+#'   MUs receive non-zero weights in the pairwise contrast. `"window"`
+#'   (default) uses only animals from selected MUs with records inside
+#'   `year_window` as target animals, while still fitting the MME with all
+#'   records in `data`. `"selected_mus"` uses all animals from the selected
+#'   MUs as target animals.
 #' @param dry_run Logical. If `TRUE`, return problem-size diagnostics before the
 #'   final MME solve instead of computing connectedness metrics.
 #' @param max_mme_dim Positive integer or `Inf`. Maximum allowed dimension of
@@ -108,7 +114,7 @@
 #'   \item{schur_solver}{Character string indicating the selected Schur solver,
 #'     or `NA` when `mme_backend = "full_mme"`.}
 #'   \item{year_window}{The time window used to select active MUs, or `NULL` if no temporal selection was applied.}
-#'   \item{temporal_mode}{Internal temporal mode used for the analysis.}
+#'   \item{target_scope}{Character string indicating which selected animals received non-zero contrast weights.}
 #'   \item{report_mus}{Character vector of MUs selected for reporting in `CD`,
 #'     `PEVD`, `qK`, and `qC`.}
 #'   \item{overlap}{A data frame describing temporal overlap between MU pairs,
@@ -131,12 +137,25 @@
 #' the kernel actually used in the analysis. The object component `qK` therefore
 #' refers generically to the denominator under `A`, `G`, `H`, or a custom kernel.
 #'
-#' When a time window is specified and `min_records_per_year` is not `NULL`,
-#' the window is used to identify active MUs to be reported. By default, the
-#' connectedness metrics among those MUs are computed using all available
-#' records in `data`, preserving information from non-reported MUs that may
-#' contribute indirectly to connectedness. The function also reports temporal
-#' overlap among selected MUs inside the activity window.
+#' If `year_window` is supplied, connectedness is computed in two steps. First,
+#' the function identifies MUs of interest using the temporal activity criterion.
+#' Second, it computes CD and PEVD for contrasts among target animals from those
+#' MUs using the full set of records in `data`.
+#'
+#' With `target_scope = "window"` (default), the function answers: among
+#' animals recorded in the specified time window from active MUs, how connected
+#' are those MUs when evaluated using all information available in the system?
+#' With `target_scope = "selected_mus"`, the function answers: among MUs
+#' selected as active in the specified time window, how connected are those MUs
+#' when all animals from those MUs are used as targets and all information
+#' available in the system is used?
+#'
+#' The MME is always built from all records supplied in `data`. The temporal
+#' arguments determine the set of reported MUs and the set of animals receiving
+#' non-zero weights in the contrast vector. Under `target_scope = "window"`,
+#' animals from a pair of MUs inside the window receive weights `1 / n_i` and
+#' `-1 / n_j`, respectively, whereas all other animals receive weight zero in
+#' the contrast but may still contribute information through the MME.
 #'
 #' The `"full_mme"` backend directly factorizes the full MME matrix
 #' `[X'X X'Z; Z'X Z'Z + lambda Kinv]`. The `"schur"` backend avoids this full
@@ -220,7 +239,7 @@ compute_connectedness <- function(
     year_col             = NULL,
     year_window          = NULL,
     min_records_per_year = NULL,
-    temporal_mode        = c("select_mus", "filter_records"),
+    target_scope         = c("window", "selected_mus"),
     dry_run              = FALSE,
     max_mme_dim          = 500000L,
     mme_backend          = c("schur", "full_mme"),
@@ -233,7 +252,7 @@ compute_connectedness <- function(
   relationship <- match.arg(relationship)
   mme_backend <- match.arg(mme_backend)
   schur_solver <- match.arg(schur_solver)
-  temporal_mode <- match.arg(temporal_mode)
+  target_scope <- match.arg(target_scope)
 
   if (!is.data.frame(data)) {
     stop("'data' must be a data frame.")
@@ -444,19 +463,25 @@ compute_connectedness <- function(
   overlap_dt <- NULL
   activity_summary <- NULL
   n_mus_before_activity_filter <- NA_integer_
-  activity_mus <- NULL
   data_activity <- NULL
+  data_activity_selected <- NULL
   n_records_activity_window <- NA_integer_
+  data_analysis <- data
 
   if (!is.null(year_window)) {
     data[[year_col]] <- as.integer(data[[year_col]])
+    data_analysis[[year_col]] <- data[[year_col]]
     Y1 <- year_window[1]
     Y2 <- year_window[2]
 
     if (verbose) {
-      message(sprintf("Using year window [%d, %d] to identify active MUs...", Y1, Y2))
+      message(sprintf("Using year window [%d, %d] to identify active MUs and target animals...", Y1, Y2))
     }
-    data_activity <- data[data[[year_col]] >= Y1 & data[[year_col]] <= Y2, ]
+    data_activity <- data[
+      data[[year_col]] >= Y1 & data[[year_col]] <= Y2,
+      ,
+      drop = FALSE
+    ]
 
     if (nrow(data_activity) == 0) {
       stop("No records remain after applying 'year_window'. Check the year range.")
@@ -485,7 +510,7 @@ compute_connectedness <- function(
       )
 
       activity_summary <- activity$activity_summary
-      activity_mus <- activity$eligible_mus
+      report_mus <- sort(as.character(activity$eligible_mus))
 
       if (verbose) {
         message(sprintf(
@@ -495,48 +520,52 @@ compute_connectedness <- function(
         ))
       }
     } else {
-      activity_mus <- sort(unique(data_activity[[mu_col]]))
+      report_mus <- sort(unique(as.character(data_activity[[mu_col]])))
     }
 
     data_activity_selected <- data_activity[
-      data_activity[[mu_col]] %in% activity_mus,
+      data_activity[[mu_col]] %in% report_mus,
       ,
       drop = FALSE
     ]
 
     overlap_dt <- .compute_overlap(data_activity_selected, mu_col, year_col, min_records_per_year)
 
-    if (temporal_mode == "select_mus") {
-      data_window <- data
-      if (verbose) {
-        message(
-          "Connectedness will be computed using all records in 'data'; ",
-          "CD/PEVD will be reported for selected active MUs only."
-        )
-      }
-    } else if (temporal_mode == "filter_records") {
-      data_window <- data_activity_selected
-      if (verbose) {
-        message(
-          "Internal temporal_mode = 'filter_records': connectedness will be ",
-          "computed using only records inside the year window."
-        )
-      }
+    data_target <- if (target_scope == "window") {
+      data_activity_selected
+    } else if (target_scope == "selected_mus") {
+      data_analysis[data_analysis[[mu_col]] %in% report_mus, , drop = FALSE]
     } else {
-      stop("Unsupported internal 'temporal_mode'.")
+      stop("Unsupported 'target_scope'.")
+    }
+
+    if (verbose) {
+      message(
+        "Connectedness MME will be computed using all records in 'data'; ",
+        "target animals are selected with target_scope = '", target_scope, "'."
+      )
     }
   } else {
-    data_window <- data
+    report_mus <- sort(unique(as.character(data_analysis[[mu_col]])))
+    data_target <- data_analysis
   }
 
-  report_mus <- if (!is.null(year_window)) {
-    sort(as.character(activity_mus))
-  } else {
-    sort(unique(data_window[[mu_col]]))
-  }
   U <- length(report_mus)
   if (U < 2) {
     stop("At least 2 selected MUs are required to compute connectedness.")
+  }
+  if (!nrow(data_target)) {
+    stop("No target records are available for the selected MUs and target_scope.")
+  }
+  if (length(unique(data_target[[mu_col]])) < 2L) {
+    stop("At least 2 MUs with target animals are required to compute connectedness.")
+  }
+  missing_target_mus <- setdiff(report_mus, unique(as.character(data_target[[mu_col]])))
+  if (length(missing_target_mus)) {
+    stop(sprintf(
+      "No target records are available for selected MU(s): %s",
+      paste(head(missing_target_mus, 5), collapse = ", ")
+    ))
   }
 
   mu_map <- stats::setNames(seq_along(report_mus), report_mus)
@@ -544,7 +573,6 @@ compute_connectedness <- function(
   mu_animal <- integer(N)
   target    <- logical(N)
 
-  data_target <- data_window[data_window[[mu_col]] %in% report_mus, , drop = FALSE]
   animal_mu <- unique(data_target[, c(".new_id", mu_col)])
   mu_animal[animal_mu$.new_id] <- mu_map[animal_mu[[mu_col]]]
   target[unique(data_target$.new_id)] <- TRUE
@@ -558,7 +586,7 @@ compute_connectedness <- function(
   if (!requireNamespace("Matrix", quietly = TRUE)) {
     stop("Package 'Matrix' is required.")
   }
-  Xsp <- Matrix::sparse.model.matrix(fixed_formula, data = data_window)
+  Xsp <- Matrix::sparse.model.matrix(fixed_formula, data = data_analysis)
 
   selected_schur_solver <- .choose_schur_solver(
     rel_matrix = rel_matrix,
@@ -570,7 +598,7 @@ compute_connectedness <- function(
     relationship = relationship,
     rel_matrix = rel_matrix,
     fixed_matrix = Xsp,
-    data_window = data_window,
+    data_window = data_analysis,
     mu_levels = report_mus,
     target = target,
     year_window = year_window,
@@ -582,9 +610,10 @@ compute_connectedness <- function(
     min_records_per_year = min_records_per_year,
     activity_summary = activity_summary,
     n_mus_before_activity_filter = n_mus_before_activity_filter,
-    temporal_mode = temporal_mode,
+    target_scope = target_scope,
     n_records_activity_window = n_records_activity_window,
-    n_mus_used_for_connectedness_records = length(unique(data_window[[mu_col]])),
+    n_records_target = nrow(data_target),
+    n_mus_used_for_connectedness_records = length(unique(data_analysis[[mu_col]])),
     call = cl
   )
 
@@ -597,7 +626,7 @@ compute_connectedness <- function(
     .check_connectedness_problem_size(diagnostics, max_mme_dim)
   }
 
-  id_rec <- as.integer(data_window$.new_id)
+  id_rec <- as.integer(data_analysis$.new_id)
 
   if (mme_backend == "full_mme") {
     if (verbose) {
@@ -705,7 +734,7 @@ compute_connectedness <- function(
       mme_backend   = mme_backend,
       schur_solver  = if (mme_backend == "schur") selected_schur_solver else NA_character_,
       year_window      = year_window,
-      temporal_mode    = temporal_mode,
+      target_scope     = target_scope,
       report_mus       = report_mus,
       overlap          = overlap_dt,
       activity_summary = activity_summary,
@@ -806,8 +835,9 @@ compute_connectedness <- function(
                                        min_records_per_year,
                                        activity_summary,
                                        n_mus_before_activity_filter,
-                                       temporal_mode,
+                                       target_scope,
                                        n_records_activity_window,
+                                       n_records_target,
                                        n_mus_used_for_connectedness_records,
                                        call) {
 
@@ -865,10 +895,11 @@ compute_connectedness <- function(
       n_records = n_records,
       n_records_activity_window = n_records_activity_window,
       n_records_used_for_connectedness = n_records,
+      n_records_target = n_records_target,
       n_mus_used_for_connectedness_records = n_mus_used_for_connectedness_records,
       n_target = n_target,
       n_management_units = n_mu,
-      temporal_mode = temporal_mode,
+      target_scope = target_scope,
       activity_filter_applied = activity_filter_applied,
       n_mus_before_activity_filter = n_mus_before_activity_filter,
       n_mus_after_activity_filter = n_mus_after_activity_filter,
@@ -928,11 +959,12 @@ compute_connectedness <- function(
   message(sprintf("  relationship              : %s", x$relationship))
   message(sprintf("  matrix storage            : %s", x$matrix_storage))
   message(sprintf("  relationship dimension    : %d", x$n_relationship))
-  message(sprintf("  temporal mode             : %s", x$temporal_mode))
-  message(sprintf("  records used for CD/PEVD  : %d", x$n_records_used_for_connectedness))
+  message(sprintf("  target scope              : %s", x$target_scope))
+  message(sprintf("  records used for CD/PEVD MME: %d", x$n_records_used_for_connectedness))
   if (!is.na(x$n_records_activity_window)) {
     message(sprintf("  records in activity window: %d", x$n_records_activity_window))
   }
+  message(sprintf("  target records            : %d", x$n_records_target))
   message(sprintf("  target animals            : %d", x$n_target))
   message(sprintf("  reported management units : %d", x$n_management_units))
   message(sprintf("  MUs in connectedness data : %d", x$n_mus_used_for_connectedness_records))

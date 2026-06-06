@@ -12,10 +12,10 @@
   diagnostic solver for small comparisons.
 - The Schur backend is now the default `compute_connectedness()` backend; the
   full-MME backend remains available with `mme_backend = "full_mme"`.
-- Changed `year_window` and `min_records_per_year` to select active MUs for
-  reporting while computing CD/PEVD with the full available data by default.
-  MUs are selected if they meet the minimum records per year in at least 50% of
-  the years in the window.
+- Added `target_scope` to define which animals from temporally selected MUs
+  receive non-zero contrast weights. The MME is built with all available data;
+  `target_scope = "window"` targets animals inside `year_window`, while
+  `target_scope = "selected_mus"` targets all animals from selected MUs.
 
 # connectedness 0.1.0
 
