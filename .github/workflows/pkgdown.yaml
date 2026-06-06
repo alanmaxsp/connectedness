@@ -48,14 +48,15 @@ jobs:
             any::roxygen2
             any::rmarkdown
             any::knitr
+            any::remotes
           needs: website
 
       - name: Build pkgdown site
         run: |
           Rscript -e 'pkgdown::build_site()'
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Commit updated pkgdown site
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          folder: docs
-          branch: gh-pages
+          commit_message: "Update pkgdown site"
+          file_pattern: docs
