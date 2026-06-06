@@ -12,23 +12,10 @@
 unidades de manejo (MUs, por sus siglas en inglés) en evaluaciones genéticas
 animales.
 
-Implementa **métricas de conectividad basadas en contrastes** a partir de las
-ecuaciones de modelos mixtos (MME) y permite análisis basados en:
-
-* relaciones de pedigree mediante **A⁻¹**
-* relaciones genómicas mediante **G⁻¹**
-* relaciones combinadas pedigree-genómicas mediante **H⁻¹**
-* kernels inversos provistos por el usuario
-
-### ¿Qué calcula?
-
-El paquete actualmente provee dos métricas de conectividad entre
-unidades de manejo:
-
-* **Contraste CD**: coeficiente de determinación de contrastes entre MUs
-* **Contraste PEVD**: varianza del error de predicción de diferencias entre MUs
-
-Valores más altos de CD y más bajos de PEVD indican mayor conectividad.
+Implementa métricas de conectividad basadas en contrastes a partir de las
+ecuaciones de modelos mixtos (MME) y permite usar relaciones de pedigree
+(**A⁻¹**), genómicas (**G⁻¹**), combinadas pedigree-genómicas (**H⁻¹**) o kernels
+inversos definidos por el usuario.
 
 ### Instalación
 
@@ -43,34 +30,21 @@ Se requiere una herramienta de compilación C++ funcional:
 * **macOS**: herramientas de línea de comandos de Xcode
 * **Linux**: toolchain estándar de compilación
 
-Para una introducción más extensa con ejemplos desarrollados, ver la
-[vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html).
+### ¿Qué calcula?
 
-### Antes de empezar
+`compute_connectedness()` devuelve dos métricas entre pares de MUs:
 
-Para ejecutar `compute_connectedness()`, los datos deben incluir:
+* **Contraste CD**: coeficiente de determinación de contrastes entre MUs.
+* **Contraste PEVD**: varianza del error de predicción de diferencias entre MUs.
 
-* una columna identificadora del animal (`animal_col`)
-* una columna de unidad de manejo (`mu_col`)
-* todas las variables de efectos fijos usadas en `fixed_formula`
+Valores más altos de CD y más bajos de PEVD indican mayor conectividad.
 
-Dependiendo de la estructura de relaciones, también se necesita:
-
-* **Ainv**: un pedigree con animal, padre y madre
-* **Ginv**: una matriz de genotipos `X` y un `animal_index`
-* **Hinv**: un pedigree, una matriz de genotipos `X` y `genotyped_idx`
-  (índices de los animales genotipados en el pedigree renumerado)
-
-Cada animal debe pertenecer a **una y solo una** unidad de manejo.
-
-### Ejemplos mínimos
-
-#### Conectividad basada en pedigree (Ainv)
+### Ejemplo mínimo con pedigree (Ainv)
 
 ```r
 library(connectedness)
 
-res_A <- compute_connectedness(
+res <- compute_connectedness(
   data          = my_data,
   animal_col    = "animal_id",
   mu_col        = "herd",
@@ -80,71 +54,21 @@ res_A <- compute_connectedness(
   relationship  = "Ainv",
   pedigree      = my_pedigree
 )
+
+print(res)
+plot(res, which = "all")
 ```
 
-#### Conectividad genómica (Ginv)
+El paquete también soporta `relationship = "Ginv"`, `"Hinv"` y `"custom"`.
+Para ejemplos desarrollados, ver la
+[vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html).
 
-```r
-res_G <- compute_connectedness(
-  data          = my_genotyped_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Ginv",
-  X             = my_genotypes_matrix,
-  animal_index  = my_index
-)
-```
+### Selección temporal de animales target
 
-#### Conectividad combinada pedigree-genómica (Hinv)
-
-```r
-res_H <- compute_connectedness(
-  data          = my_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Hinv",
-  pedigree      = my_pedigree,
-  X             = my_genotypes_matrix,
-  genotyped_idx = my_genotyped_idx
-)
-```
-
-### Salida
-
-`compute_connectedness()` devuelve un objeto de clase `"connectedness"` con
-componentes como:
-
-* `CD`: matriz o resumen de valores de conectividad basados en CD entre unidades
-  de manejo.
-* `PEVD`: matriz o resumen de valores de conectividad basados en PEVD entre
-  unidades de manejo.
-* `n_target`: número de animales objetivo usados en el análisis, cuando
-  corresponde.
-* `relationship`: estructura de relaciones usada en el análisis (`"Ainv"`,
-  `"Ginv"`, `"Hinv"` o custom).
-
-Los resultados se pueden inspeccionar o visualizar con:
-
-```r
-print(res_A)
-plot(res_A, which = "all")
-```
-
-### Restricción temporal opcional
-
-La conectividad también puede enfocarse en unidades de manejo activas dentro de
-una ventana temporal. Si se define `min_records_per_year`, la ventana se usa para
-seleccionar las MUs activas que se reportan: una MU debe tener al menos ese
-número de registros en al menos el 50% de los años de la ventana. Por defecto
-(`target_scope = "window"`), las métricas CD/PEVD usan como animales target a
-los animales de esas MUs dentro de la ventana, pero el MME se ajusta con todos
-los registros disponibles en `data`:
+Una ventana temporal puede usarse para seleccionar MUs activas y definir los
+animales target de los contrastes. Por defecto (`target_scope = "window"`), el
+MME se ajusta usando todos los registros disponibles en `data`, pero CD/PEVD se
+reportan para animales de MUs activas dentro de la ventana.
 
 ```r
 res_time <- compute_connectedness(
@@ -160,14 +84,12 @@ res_time <- compute_connectedness(
   year_window          = c(2018, 2022),
   min_records_per_year = 30
 )
-
-plot(res_time, which = "overlap")
 ```
 
-### Diagnóstico de tamaño del problema
+### Diagnóstico rápido
 
-Para análisis grandes, puede inspeccionarse el tamaño del sistema antes de
-resolver las MME:
+Para bases grandes, `dry_run = TRUE` permite inspeccionar el tamaño esperado del
+sistema antes de resolver las MME:
 
 ```r
 diag <- compute_connectedness(
@@ -183,37 +105,21 @@ diag <- compute_connectedness(
 )
 ```
 
-Cuando se usa `mme_backend = "full_mme"`, `compute_connectedness()` evita iniciar
-la resolución directa si la dimensión del sistema MME supera
-`max_mme_dim = 500000`, para devolver un error informativo en lugar de arriesgar
-una caída de R por falta de memoria. Este límite puede desactivarse con
-`max_mme_dim = Inf` bajo responsabilidad del usuario. El diagnóstico también
-informa `matrix_storage`,
-`dense_matrix_gb`, `schur_W_storage_mb`, `schur_S_storage_mb` y el solver Schur
-recomendado, útiles para evaluar la memoria esperada antes de resolver.
+### Salida principal
 
-Por defecto, `compute_connectedness()` usa el backend basado en complemento de
-Schur para evitar la factorización directa de la MME completa:
+El objeto `connectedness` incluye, entre otros componentes:
 
-```r
-res_schur <- compute_connectedness(
-  data          = my_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Ainv",
-  pedigree      = my_pedigree,
-  mme_backend   = "schur",
-  schur_solver  = "auto"
-)
-```
+* `CD` y `PEVD`: matrices de conectividad entre MUs reportadas.
+* `n_target`: número de animales target por MU reportada; estos animales reciben
+  pesos distintos de cero en los contrastes pareados.
+* `report_mus`: MUs incluidas en las matrices CD/PEVD.
+* `target_scope`: definición de los animales target usados en los contrastes.
 
-Con `schur_solver = "auto"`, `Ainv` y matrices sparse de baja densidad usan
-CHOLMOD a través de Matrix, mientras que `Ginv` y matrices densas usan el solver
-denso compilado. El solver `"eigen_sparse"` se conserva como ruta diagnóstica en
-ejemplos pequeños. El backend `"full_mme"` se conserva para validación.
+### Más información
+
+La [vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html)
+es el documento principal para la explicación metodológica, ejemplos con
+`Ginv`, `Hinv` y kernels custom, diagnóstico computacional y referencias.
 
 ### Funciones principales
 
@@ -221,21 +127,6 @@ ejemplos pequeños. El backend `"full_mme"` se conserva para validación.
 * `build_Ainv()`
 * `build_Ginv()`
 * `build_Hinv()`
-
-### Referencias
-
-Kennedy, B. W., & Trus, D. (1993). Considerations on genetic connectedness
-between management units under an animal model. *Journal of Animal Science*,
-71, 2341–2352.
-
-Laloë, D. (1993). Precision and information in linear models of genetic
-evaluation. *Genetics Selection Evolution*, 25, 557–576.
-
-Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures of
-precision and connectedness in mixed linear models of genetic evaluation.
-*Genetics Selection Evolution*, 28, 359–378.
-
-Yu, H., & Morota, G. (2021). GCA: An R package for genetic connectedness analysis using pedigree and genomic data. *BMC Genomics*, 22, 119.
 
 ---
 
@@ -246,21 +137,10 @@ Yu, H., & Morota, G. (2021). GCA: An R package for genetic connectedness analysi
 `connectedness` is an R package for computing genetic connectedness between
 management units (MUs) in animal genetic evaluations.
 
-It implements **contrast-based connectedness metrics** from the mixed model equations (MME) and supports analyses based on:
-
-* pedigree relationships through **A⁻¹**
-* genomic relationships through **G⁻¹**
-* combined pedigree-genomic relationships through **H⁻¹**
-* user-supplied inverse kernels
-
-### What does it compute?
-
-The package currently provides two pairwise connectedness metrics between management units:
-
-* **CD contrast**: Coefficient of Determination of contrasts between MUs
-* **PEVD contrast**: Prediction Error Variance of Differences between MUs
-
-Higher CD and lower PEVD indicate stronger connectedness.
+It implements contrast-based connectedness metrics from the mixed model
+equations (MME) and supports pedigree relationships (**A⁻¹**), genomic
+relationships (**G⁻¹**), combined pedigree-genomic relationships (**H⁻¹**), and
+user-supplied inverse kernels.
 
 ### Installation
 
@@ -275,32 +155,21 @@ A working C++ toolchain is required:
 * **macOS**: Xcode command line tools
 * **Linux**: standard compiler toolchain
 
-For a longer introduction with worked examples, see the [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html).
+### What does it compute?
 
-### Before you start
+`compute_connectedness()` returns two pairwise metrics between MUs:
 
-To run `compute_connectedness()`, your data should include:
+* **CD contrast**: coefficient of determination of contrasts between MUs.
+* **PEVD contrast**: prediction error variance of differences between MUs.
 
-* an animal identifier column
-* a management-unit column (`mu_col`)
-* all fixed-effect variables used in `fixed_formula`
+Higher CD and lower PEVD indicate stronger connectedness.
 
-Depending on the relationship structure, you will also need:
-
-* **Ainv**: a pedigree with animal, sire, and dam
-* **Ginv**: a genotype matrix `X` and an `animal_index`
-* **Hinv**: a pedigree, a genotype matrix `X`, and `genotyped_idx`
-
-Each animal must belong to **one and only one** management unit.
-
-### Minimal examples
-
-#### Pedigree-based connectedness (Ainv)
+### Minimal pedigree example (Ainv)
 
 ```r
 library(connectedness)
 
-res_A <- compute_connectedness(
+res <- compute_connectedness(
   data          = my_data,
   animal_col    = "animal_id",
   mu_col        = "herd",
@@ -310,69 +179,21 @@ res_A <- compute_connectedness(
   relationship  = "Ainv",
   pedigree      = my_pedigree
 )
+
+print(res)
+plot(res, which = "all")
 ```
 
-#### Genomic connectedness (Ginv)
+The package also supports `relationship = "Ginv"`, `"Hinv"`, and `"custom"`.
+See the [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html)
+for worked examples.
 
-```r
-res_G <- compute_connectedness(
-  data          = my_genotyped_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Ginv",
-  X             = my_genotypes_matrix,
-  animal_index  = my_index
-)
-```
+### Temporal definition of target animals
 
-#### Combined pedigree-genomic connectedness (Hinv)
-
-```r
-res_H <- compute_connectedness(
-  data          = my_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Hinv",
-  pedigree      = my_pedigree,
-  X             = my_genotypes_matrix,
-  genotyped_idx = my_genotyped_idx
-)
-```
-
-### Output
-
-`compute_connectedness()` returns an object of class `"connectedness"` with
-components such as:
-
-* `CD`: matrix or summary of CD-based connectedness values between management
-  units.
-* `PEVD`: matrix or summary of PEVD-based connectedness values between
-  management units.
-* `n_target`: number of target animals used in the analysis, when applicable.
-* `relationship`: relationship structure used in the analysis (`"Ainv"`,
-  `"Ginv"`, `"Hinv"`, or custom).
-
-You can inspect or visualize results with:
-
-```r
-print(res_A)
-plot(res_A, which = "all")
-```
-
-### Optional temporal restriction
-
-Connectedness can also be focused on management units active within a time
-window. If `min_records_per_year` is set, the window is used to select the active
-MUs to report: an MU must have at least that many records in at least 50% of the
-years in the window. By default (`target_scope = "window"`), CD/PEVD use animals
-from those MUs inside the window as targets, while the MME is fitted with all
-available records in `data`:
+A time window can be used to select active MUs and define the target animals for
+the contrasts. By default (`target_scope = "window"`), the MME is fitted using
+all records in `data`, but CD/PEVD are reported for animals from active MUs
+inside the time window.
 
 ```r
 res_time <- compute_connectedness(
@@ -388,13 +209,12 @@ res_time <- compute_connectedness(
   year_window          = c(2018, 2022),
   min_records_per_year = 30
 )
-
-plot(res_time, which = "overlap")
 ```
 
-### Problem-size diagnostics
+### Quick diagnostics
 
-For large analyses, you can inspect the system size before solving the MME:
+For large datasets, use `dry_run = TRUE` to inspect the expected MME system size
+before solving:
 
 ```r
 diag <- compute_connectedness(
@@ -410,37 +230,21 @@ diag <- compute_connectedness(
 )
 ```
 
-When `mme_backend = "full_mme"`, `compute_connectedness()` avoids starting the
-direct solve when the MME system dimension exceeds `max_mme_dim = 500000`, so it
-can return an informative error instead of risking an R crash due to memory
-pressure. You can disable this limit with `max_mme_dim = Inf` at your own risk.
-The diagnostics also report `matrix_storage`, `dense_matrix_gb`,
-`schur_W_storage_mb`,
-`schur_S_storage_mb`, and the recommended Schur solver, which are useful for
-evaluating the expected memory footprint before solving.
+### Main output
 
-By default, `compute_connectedness()` uses the Schur-complement backend to avoid
-direct factorization of the full MME:
+The `connectedness` object includes, among other components:
 
-```r
-res_schur <- compute_connectedness(
-  data          = my_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Ainv",
-  pedigree      = my_pedigree,
-  mme_backend   = "schur",
-  schur_solver  = "auto"
-)
-```
+* `CD` and `PEVD`: connectedness matrices among reported MUs.
+* `n_target`: number of target animals per reported MU; these animals receive
+  non-zero weights in the pairwise contrasts.
+* `report_mus`: MUs included in the reported CD/PEVD matrices.
+* `target_scope`: definition of the target animals used in the contrasts.
 
-With `schur_solver = "auto"`, `Ainv` and low-density sparse matrices use CHOLMOD
-through Matrix, while `Ginv` and dense matrices use the compiled dense solver.
-The `"eigen_sparse"` solver is retained as a diagnostic path for small examples.
-The `"full_mme"` backend is retained for validation.
+### More information
+
+The [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html) is
+the main document for methodological background, examples with `Ginv`, `Hinv`
+and custom kernels, computational diagnostics, and references.
 
 ### Main functions
 
@@ -448,18 +252,3 @@ The `"full_mme"` backend is retained for validation.
 * `build_Ainv()`
 * `build_Ginv()`
 * `build_Hinv()`
-
-### References
-
-Kennedy, B. W., & Trus, D. (1993). Considerations on genetic connectedness
-between management units under an animal model. *Journal of Animal Science*,
-71, 2341–2352.
-
-Laloë, D. (1993). Precision and information in linear models of genetic
-evaluation. *Genetics Selection Evolution*, 25, 557–576.
-
-Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures of
-precision and connectedness in mixed linear models of genetic evaluation.
-*Genetics Selection Evolution*, 28, 359–378.
-
-Yu, H., & Morota, G. (2021). GCA: An R package for genetic connectedness analysis using pedigree and genomic data. *BMC Genomics*, 22, 119.
