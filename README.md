@@ -1,63 +1,50 @@
 # connectedness
 
-`connectedness` is an R package for computing genetic connectedness between
-management units (MUs) in animal genetic evaluations.
+<p align="center">
+  <a href="#espanol">Español</a> · <a href="#english">English</a>
+</p>
 
-It implements **contrast-based connectedness metrics** from the mixed model equations (MME) and supports analyses based on:
+<a id="espanol"></a>
 
-* pedigree relationships through **A⁻¹**
-* genomic relationships through **G⁻¹**
-* combined pedigree-genomic relationships through **H⁻¹**
-* user-supplied inverse kernels
+## Español
 
-## What does it compute?
+`connectedness` es un paquete de R para calcular conectividad genética entre
+unidades de manejo (MUs, por sus siglas en inglés) en evaluaciones genéticas
+animales.
 
-The package currently provides two pairwise connectedness metrics between management units:
+Implementa métricas de conectividad basadas en contrastes a partir de las
+ecuaciones de modelos mixtos (MME) y permite usar relaciones de pedigree
+(**A⁻¹**), genómicas (**G⁻¹**), combinadas pedigree-genómicas (**H⁻¹**) o kernels
+inversos definidos por el usuario.
 
-* **CD contrast**: Coefficient of Determination of contrasts between MUs
-* **PEVD contrast**: Prediction Error Variance of Differences between MUs
-
-Higher CD and lower PEVD indicate stronger connectedness.
-
-## Installation
+### Instalación
 
 ```r
 # install.packages("remotes")
 remotes::install_github("alanmaxsp/connectedness")
 ```
 
-A working C++ toolchain is required:
+Se requiere una herramienta de compilación C++ funcional:
 
 * **Windows**: Rtools
-* **macOS**: Xcode command line tools
-* **Linux**: standard compiler toolchain
+* **macOS**: herramientas de línea de comandos de Xcode
+* **Linux**: toolchain estándar de compilación
 
-For a longer introduction with worked examples, see the [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html).
+### ¿Qué calcula?
 
-## Before you start
+`compute_connectedness()` devuelve dos métricas entre pares de MUs:
 
-To run `compute_connectedness()`, your data should include:
+* **Contraste CD**: coeficiente de determinación de contrastes entre MUs.
+* **Contraste PEVD**: varianza del error de predicción de diferencias entre MUs.
 
-* an animal identifier column
-* a management-unit column (`mu_col`)
-* all fixed-effect variables used in `fixed_formula`
+Valores más altos de CD y más bajos de PEVD indican mayor conectividad.
 
-Depending on the relationship structure, you will also need:
-
-* **Ainv**: a pedigree with animal, sire, and dam
-* **Ginv**: a genotype matrix `X` and an `animal_index`
-* **Hinv**: a pedigree, a genotype matrix `X`, and `genotyped_idx`
-
-Each animal must belong to **one and only one** management unit.
-
-## Minimal examples
-
-### Pedigree-based connectedness (Ainv)
+### Ejemplo mínimo con pedigree (Ainv)
 
 ```r
 library(connectedness)
 
-res_A <- compute_connectedness(
+res <- compute_connectedness(
   data          = my_data,
   animal_col    = "animal_id",
   mu_col        = "herd",
@@ -67,63 +54,21 @@ res_A <- compute_connectedness(
   relationship  = "Ainv",
   pedigree      = my_pedigree
 )
+
+print(res)
+plot(res, which = "all")
 ```
 
-### Genomic connectedness (Ginv)
+El paquete también soporta `relationship = "Ginv"`, `"Hinv"` y `"custom"`.
+Para ejemplos desarrollados, ver la
+[vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html).
 
-```r
-res_G <- compute_connectedness(
-  data          = my_genotyped_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Ginv",
-  X             = my_genotypes_matrix,
-  animal_index  = my_index
-)
-```
+### Selección temporal de animales target
 
-### Combined pedigree-genomic connectedness (Hinv)
-
-```r
-res_H <- compute_connectedness(
-  data          = my_data,
-  animal_col    = "animal_id",
-  mu_col        = "herd",
-  fixed_formula = ~ 1 + herd + sex,
-  sigma2a       = 2.0,
-  sigma2e       = 5.0,
-  relationship  = "Hinv",
-  pedigree      = my_pedigree,
-  X             = my_genotypes_matrix,
-  genotyped_idx = my_genotyped_idx
-)
-```
-## Output
-
-`compute_connectedness()` returns an object of class `"connectedness"` with
-components such as:
-
-* `CD`: matrix or summary of CD-based connectedness values between management
-  units.
-* `PEVD`: matrix or summary of PEVD-based connectedness values between
-  management units.
-* `n_target`: number of target animals used in the analysis, when applicable.
-* `relationship`: relationship structure used in the analysis (`"Ainv"`,
-  `"Ginv"`, `"Hinv"`, or custom).
-
-You can inspect or visualize results with:
-
-```r
-print(res_A)
-plot(res_A, which = "all")
-```
-
-## Optional temporal restriction
-
-Connectedness can also be evaluated within a restricted time window:
+Una ventana temporal puede usarse para seleccionar MUs activas y definir los
+animales target de los contrastes. Por defecto (`target_scope = "window"`), el
+MME se ajusta usando todos los registros disponibles en `data`, pero CD/PEVD se
+reportan para animales de MUs activas dentro de la ventana.
 
 ```r
 res_time <- compute_connectedness(
@@ -137,30 +82,173 @@ res_time <- compute_connectedness(
   pedigree             = my_pedigree,
   year_col             = "birth_year",
   year_window          = c(2018, 2022),
-  min_records_per_year = 10
+  min_records_per_year = 30
 )
-
-plot(res_time, which = "overlap")
 ```
 
-## Main functions
+### Diagnóstico rápido
+
+Para bases grandes, `dry_run = TRUE` permite inspeccionar el tamaño esperado del
+sistema antes de resolver las MME:
+
+```r
+diag <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree,
+  dry_run       = TRUE
+)
+```
+
+### Salida principal
+
+El objeto `connectedness` incluye, entre otros componentes:
+
+* `CD` y `PEVD`: matrices de conectividad entre MUs reportadas.
+* `n_target`: número de animales target por MU reportada; estos animales reciben
+  pesos distintos de cero en los contrastes pareados.
+* `report_mus`: MUs incluidas en las matrices CD/PEVD.
+* `target_scope`: definición de los animales target usados en los contrastes.
+
+### Más información
+
+La [vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html)
+es el documento principal para la explicación metodológica, ejemplos con
+`Ginv`, `Hinv` y kernels custom, diagnóstico computacional y referencias.
+
+### Funciones principales
 
 * `compute_connectedness()`
 * `build_Ainv()`
 * `build_Ginv()`
 * `build_Hinv()`
 
-## References
+---
 
-Kennedy, B. W., & Trus, D. (1993). Considerations on genetic connectedness
-between management units under an animal model. *Journal of Animal Science*,
-71, 2341–2352.
+<a id="english"></a>
 
-Laloë, D. (1993). Precision and information in linear models of genetic
-evaluation. *Genetics Selection Evolution*, 25, 557–576.
+## English
 
-Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures of
-precision and connectedness in mixed linear models of genetic evaluation.
-*Genetics Selection Evolution*, 28, 359–378.
+`connectedness` is an R package for computing genetic connectedness between
+management units (MUs) in animal genetic evaluations.
 
-Yu, H., & Morota, G. (2021). GCA: An R package for genetic connectedness analysis using pedigree and genomic data. *BMC Genomics*, 22, 119.
+It implements contrast-based connectedness metrics from the mixed model
+equations (MME) and supports pedigree relationships (**A⁻¹**), genomic
+relationships (**G⁻¹**), combined pedigree-genomic relationships (**H⁻¹**), and
+user-supplied inverse kernels.
+
+### Installation
+
+```r
+# install.packages("remotes")
+remotes::install_github("alanmaxsp/connectedness")
+```
+
+A working C++ toolchain is required:
+
+* **Windows**: Rtools
+* **macOS**: Xcode command line tools
+* **Linux**: standard compiler toolchain
+
+### What does it compute?
+
+`compute_connectedness()` returns two pairwise metrics between MUs:
+
+* **CD contrast**: coefficient of determination of contrasts between MUs.
+* **PEVD contrast**: prediction error variance of differences between MUs.
+
+Higher CD and lower PEVD indicate stronger connectedness.
+
+### Minimal pedigree example (Ainv)
+
+```r
+library(connectedness)
+
+res <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree
+)
+
+print(res)
+plot(res, which = "all")
+```
+
+The package also supports `relationship = "Ginv"`, `"Hinv"`, and `"custom"`.
+See the [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html)
+for worked examples.
+
+### Temporal definition of target animals
+
+A time window can be used to select active MUs and define the target animals for
+the contrasts. By default (`target_scope = "window"`), the MME is fitted using
+all records in `data`, but CD/PEVD are reported for animals from active MUs
+inside the time window.
+
+```r
+res_time <- compute_connectedness(
+  data                 = my_data,
+  animal_col           = "animal_id",
+  mu_col               = "herd",
+  fixed_formula        = ~ 1 + herd + sex,
+  sigma2a              = 2.0,
+  sigma2e              = 5.0,
+  relationship         = "Ainv",
+  pedigree             = my_pedigree,
+  year_col             = "birth_year",
+  year_window          = c(2018, 2022),
+  min_records_per_year = 30
+)
+```
+
+### Quick diagnostics
+
+For large datasets, use `dry_run = TRUE` to inspect the expected MME system size
+before solving:
+
+```r
+diag <- compute_connectedness(
+  data          = my_data,
+  animal_col    = "animal_id",
+  mu_col        = "herd",
+  fixed_formula = ~ 1 + herd + sex,
+  sigma2a       = 2.0,
+  sigma2e       = 5.0,
+  relationship  = "Ainv",
+  pedigree      = my_pedigree,
+  dry_run       = TRUE
+)
+```
+
+### Main output
+
+The `connectedness` object includes, among other components:
+
+* `CD` and `PEVD`: connectedness matrices among reported MUs.
+* `n_target`: number of target animals per reported MU; these animals receive
+  non-zero weights in the pairwise contrasts.
+* `report_mus`: MUs included in the reported CD/PEVD matrices.
+* `target_scope`: definition of the target animals used in the contrasts.
+
+### More information
+
+The [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html) is
+the main document for methodological background, examples with `Ginv`, `Hinv`
+and custom kernels, computational diagnostics, and references.
+
+### Main functions
+
+* `compute_connectedness()`
+* `build_Ainv()`
+* `build_Ginv()`
+* `build_Hinv()`

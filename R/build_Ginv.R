@@ -16,6 +16,8 @@
 #' @param A22 Optional dense pedigree-based relationship matrix for the same
 #'   genotyped animals and in the same order as the rows of `X`. Required when
 #'   `tunedG` is 2 or 3.
+#' @param verbose Logical; if `TRUE`, print progress messages from the compiled
+#'   genomic matrix construction routine.
 #'
 #' @return A list containing `Ginv` and several diagnostics describing SNP
 #'   filtering and tuning.
@@ -36,7 +38,7 @@ build_Ginv <- function(X,
                        n_threads     = 1L,
                        tunedG        = 0L,
                        A22           = NULL,
-					   verbose       = TRUE) {
+                       verbose       = TRUE) {
 
   if (!is.matrix(X)) {
     X <- as.matrix(X)
@@ -79,7 +81,7 @@ build_Ginv <- function(X,
     as.integer(n_threads),
     as.integer(tunedG),
     A22,
-	verbose,
+    verbose,
     PACKAGE = "connectedness"
   )
 }

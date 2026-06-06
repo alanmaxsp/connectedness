@@ -105,20 +105,20 @@ static inline MatrixXd tune_G_affine_cpp(const MatrixXd& G,
 // 1. compute_F_ML92
 // ===========================================================================
 
-//' Compute inbreeding coefficients via an ML92-style traversal
- //'
- //' Computes inbreeding coefficients using an ancestor-traversal algorithm
- //' inspired by the Meuwissen & Luo (1992) strategy and adapted from the
- //' implementation logic used in MCMCglmm.
- //'
- //' Animals must be numbered 1..N in chronological order (parents before
- //' offspring). Unknown parents coded as 0.
- //'
- //' @param sire Integer vector of sire indices (0 = unknown), length N.
- //' @param dam  Integer vector of dam indices (0 = unknown), length N.
- //' @return Numeric vector of inbreeding coefficients F, length N.
- //' @keywords internal
- //' @noRd
+// Compute inbreeding coefficients via an ML92-style traversal
+ //
+ // Computes inbreeding coefficients using an ancestor-traversal algorithm
+ // inspired by the Meuwissen & Luo (1992) strategy and adapted from the
+ // implementation logic used in MCMCglmm.
+ //
+ // Animals must be numbered 1..N in chronological order (parents before
+ // offspring). Unknown parents coded as 0.
+ //
+ // @param sire Integer vector of sire indices (0 = unknown), length N.
+ // @param dam  Integer vector of dam indices (0 = unknown), length N.
+ // @return Numeric vector of inbreeding coefficients F, length N.
+ // @keywords internal
+ // @noRd
  // [[Rcpp::export]]
  NumericVector compute_F_ML92(const IntegerVector& sire,
                               const IntegerVector& dam) {
@@ -217,20 +217,20 @@ static inline MatrixXd tune_G_affine_cpp(const MatrixXd& G,
 // 2. build_Ainv_sparse_RA
 // ===========================================================================
 
-//' Build sparse A-inverse from a renumbered pedigree
- //'
- //' Implements the Henderson (1976) direct method. Animals must be numbered
- //' 1..N in chronological order (parents before offspring). Unknown parents
- //' coded as 0.
- //'
- //' Inbreeding coefficients are computed via \code{compute_F_ML92()}.
- //'
- //' @param sire Integer vector of sire indices (0 = unknown), length N.
- //' @param dam  Integer vector of dam  indices (0 = unknown), length N.
- //' @return List with \code{Ainv} (dgCMatrix, N x N) and \code{F}
- //'   (numeric vector of inbreeding coefficients, length N).
- //' @keywords internal
- //' @noRd
+// Build sparse A-inverse from a renumbered pedigree
+ //
+ // Implements the Henderson (1976) direct method. Animals must be numbered
+ // 1..N in chronological order (parents before offspring). Unknown parents
+ // coded as 0.
+ //
+ // Inbreeding coefficients are computed via \code{compute_F_ML92()}.
+ //
+ // @param sire Integer vector of sire indices (0 = unknown), length N.
+ // @param dam  Integer vector of dam  indices (0 = unknown), length N.
+ // @return List with \code{Ainv} (dgCMatrix, N x N) and \code{F}
+ //   (numeric vector of inbreeding coefficients, length N).
+ // @keywords internal
+ // @noRd
  // [[Rcpp::export]]
  List build_Ainv_sparse_RA(const IntegerVector& sire,
                            const IntegerVector& dam) {
@@ -398,10 +398,10 @@ static MatrixXd build_A22_eigen(const IntegerVector& sire,
   return A22;
 }
 
-//' Build the dense A22 submatrix for genotyped animals
- //'
- //' @keywords internal
- //' @noRd
+// Build the dense A22 submatrix for genotyped animals
+ //
+ // @keywords internal
+ // @noRd
  // [[Rcpp::export]]
 NumericMatrix build_A22(const IntegerVector& sire,
                         const IntegerVector& dam,
@@ -634,10 +634,10 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
     return out;
 }
 
-//' Compute dense G-inverse for genotyped animals (VanRaden method 1)
- //'
- //' @keywords internal
- //' @noRd
+// Compute dense G-inverse for genotyped animals (VanRaden method 1)
+ //
+ // @keywords internal
+ // @noRd
  // [[Rcpp::export]]
  List compute_Ginv(const Eigen::MatrixXi& X,
                    double maf_threshold = 0.05,
@@ -681,13 +681,13 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 // 5. compute_Hinv
 // ===========================================================================
 
-//' Compute sparse H-inverse for a combined pedigree-genomic relationship model
- //'
- //' Implements the generalized form:
- //' \deqn{H^{-1} = A^{-1} + \begin{bmatrix} 0 & 0 \\ 0 & \tau G^{-1} - \omega A_{22}^{-1} \end{bmatrix}}
- //'
- //' @keywords internal
- //' @noRd
+// Compute sparse H-inverse for a combined pedigree-genomic relationship model
+ //
+ // Implements the generalized form:
+ // \deqn{H^{-1} = A^{-1} + \begin{bmatrix} 0 & 0 \\ 0 & \tau G^{-1} - \omega A_{22}^{-1} \end{bmatrix}}
+ //
+ // @keywords internal
+ // @noRd
  // [[Rcpp::export]]
  Eigen::SparseMatrix<double> compute_Hinv(
      const Eigen::SparseMatrix<double>& Ainv,
@@ -787,32 +787,32 @@ static GinvResultCpp compute_Ginv_cpp(const MatrixXi& X,
 // 6. compute_Hinv_from_X
 // ===========================================================================
 
-//' Compute full H-inverse pipeline from pedigree and genotypes
- //'
- //' Convenience wrapper that performs the full workflow.
- //'
- //' @param sire Integer vector of sire indices (0 = unknown), length N.
- //' @param dam Integer vector of dam indices (0 = unknown), length N.
- //' @param genotyped_idx Integer vector (1-based pedigree indices) for the
- //'   genotyped animals, in the same order as the rows of \code{X}.
- //' @param X Genotype matrix (n_gen x m), coded 0/1/2.
- //' @param maf_threshold Minor allele frequency threshold.
- //' @param missing_code Integer value indicating missing genotypes.
- //' @param blend Blending factor applied to G before optional tuning.
- //' @param chunk_size Number of SNP columns per chunk in G construction.
- //' @param n_threads Number of OpenMP threads.
- //' @param tunedG Integer tuning option for G.
- //' @param tau Scaling factor multiplying \eqn{G^{-1}} in H-inverse.
- //' @param omega Scaling factor multiplying \eqn{A_{22}^{-1}} in H-inverse.
- //' @param return_Ainv Return Ainv in output list. Default TRUE.
- //' @param return_F Return F in output list. Default TRUE.
- //' @param return_A22 Return A22 in output list. Default FALSE.
- //' @param return_Ginv Return Ginv in output list. Default FALSE.
- //' @param return_allele_freqs Return allele frequencies in output list. Default FALSE.
- //' @param verbose Print progress messages to console. Default TRUE.
- //' @return List containing Hinv and selected optional objects.
- //' @keywords internal
- //' @noRd
+// Compute full H-inverse pipeline from pedigree and genotypes
+ //
+ // Convenience wrapper that performs the full workflow.
+ //
+ // @param sire Integer vector of sire indices (0 = unknown), length N.
+ // @param dam Integer vector of dam indices (0 = unknown), length N.
+ // @param genotyped_idx Integer vector (1-based pedigree indices) for the
+ //   genotyped animals, in the same order as the rows of \code{X}.
+ // @param X Genotype matrix (n_gen x m), coded 0/1/2.
+ // @param maf_threshold Minor allele frequency threshold.
+ // @param missing_code Integer value indicating missing genotypes.
+ // @param blend Blending factor applied to G before optional tuning.
+ // @param chunk_size Number of SNP columns per chunk in G construction.
+ // @param n_threads Number of OpenMP threads.
+ // @param tunedG Integer tuning option for G.
+ // @param tau Scaling factor multiplying \eqn{G^{-1}} in H-inverse.
+ // @param omega Scaling factor multiplying \eqn{A_{22}^{-1}} in H-inverse.
+ // @param return_Ainv Return Ainv in output list. Default TRUE.
+ // @param return_F Return F in output list. Default TRUE.
+ // @param return_A22 Return A22 in output list. Default FALSE.
+ // @param return_Ginv Return Ginv in output list. Default FALSE.
+ // @param return_allele_freqs Return allele frequencies in output list. Default FALSE.
+ // @param verbose Print progress messages to console. Default TRUE.
+ // @return List containing Hinv and selected optional objects.
+ // @keywords internal
+ // @noRd
  // [[Rcpp::export]]
  List compute_Hinv_from_X(const Rcpp::IntegerVector& sire,
                           const Rcpp::IntegerVector& dam,
