@@ -43,6 +43,7 @@ jobs:
         with:
           extra-packages: |
             any::devtools
+            any::remotes
             any::roxygen2
             any::rmarkdown
             any::knitr
