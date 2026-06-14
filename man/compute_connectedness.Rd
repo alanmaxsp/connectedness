@@ -100,7 +100,7 @@ of the compiled backend. Currently, this argument affects \code{Ginv} and the
 genomic substeps of \code{Hinv}, but it is ignored for purely pedigree-based
 \code{Ainv} analyses and is not propagated to the final CD/PEVD MME solver.}
 
-\item{tunedG}{Integer tuning option for \code{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \code{G}; \code{2} = affine tuning to match \code{A22} mean diagonal and off-diagonal; \code{3} = shift \code{G} by a constant so its global mean matches \code{A22}.}
+\item{tunedG}{Integer tuning option for \code{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \code{G}; \code{2} = affine tuning to match \[...]
 
 \item{tau}{Scaling factor multiplying \code{G^{-1}} in the construction of
 \code{H^{-1}}.}
@@ -126,10 +126,10 @@ are active in at least 50\% of the years in \code{year_window}. If \code{NULL}, 
 MUs with records in the window are selected.}
 
 \item{target_scope}{Character string defining which animals from the selected
-MUs receive non-zero weights in the pairwise contrast. \code{"window"}
+MUs receive non-zero weights in the pairwise contrast. \code{window}
 (default) uses only animals from selected MUs with records inside
 \code{year_window} as target animals, while still fitting the MME with all
-records in \code{data}. \code{"selected_mus"} uses all animals from the selected
+records in \code{data}. \code{selected_mus} uses all animals from the selected
 MUs as target animals.}
 
 \item{dry_run}{Logical. If \code{TRUE}, return problem-size diagnostics before the
@@ -141,17 +141,17 @@ final sparse direct solve is attempted. Set to \code{Inf} to disable this safety
 check. This safety check is applied only when \code{mme_backend = "full_mme"}.}
 
 \item{mme_backend}{Character string indicating the numerical backend used for
-the MME solve. \code{"schur"} (the default) factorizes the animal block and
-absorbs fixed effects through a Schur complement. \code{"full_mme"} builds and
+the MME solve. \code{schur} (the default) factorizes the animal block and
+absorbs fixed effects through a Schur complement. \code{full_mme} builds and
 factorizes the full MME system. The two backends are algebraically equivalent
 up to floating-point roundoff.}
 
 \item{schur_solver}{Character string indicating the numerical solver used when
-\code{mme_backend = "schur"}. Options are \code{"auto"}, \code{"cholmod"}, \code{"cholmod_lowmem"},
-\code{"dense"}, and \code{"eigen_sparse"}. \code{"cholmod"} uses CHOLMOD through
-the Matrix package for sparse kernels; \code{"cholmod_lowmem"} uses the same
+\code{mme_backend = "schur"}. Options are \code{auto}, \code{cholmod}, \code{cholmod_lowmem},
+\code{dense}, and \code{eigen_sparse}. \code{cholmod} uses CHOLMOD through
+the Matrix package for sparse kernels; \code{cholmod_lowmem} uses the same
 formulation but avoids materializing the full dense \code{Cuu^{-1} Z'X} matrix;
-\code{"dense"} uses a dense compiled solver; \code{"eigen_sparse"} keeps the Eigen
+\code{dense} uses a dense compiled solver; \code{eigen_sparse} keeps the Eigen
 sparse solver for diagnostics and small comparisons.}
 
 \item{schur_block_size}{Positive integer. Number of MU right-hand-side columns
@@ -165,7 +165,7 @@ memory use during construction of the fixed-effect Schur complement
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
 \value{
-An object of class \code{"connectedness"}, which is a list with:
+An object of class \code{connectedness}, which is a list with:
 \describe{
 \item{CD}{Numeric matrix (U x U). Pairwise CD contrast values between MUs.}
 \item{PEVD}{Numeric matrix (U x U). Pairwise PEVD contrast values between MUs.
@@ -234,18 +234,18 @@ animals from a pair of MUs inside the window receive weights \code{1 / n_i} and
 \code{-1 / n_j}, respectively, whereas all other animals receive weight zero in
 the contrast but may still contribute information through the MME.
 
-The \code{"full_mme"} backend directly factorizes the full MME matrix
-\code{[X'X X'Z; Z'X Z'Z + lambda Kinv]}. The \code{"schur"} backend avoids this full
+The \code{full_mme} backend directly factorizes the full MME matrix
+\code{[X'X X'Z; Z'X Z'Z + lambda Kinv]}. The \code{schur} backend avoids this full
 factorization by factorizing \code{Cuu = Z'Z + lambda Kinv} and using the fixed-
 effect Schur complement \code{S = X'X - X'Z Cuu^{-1} Z'X}.
 
 The Schur formulation is algebraically independent of the relationship matrix
-type. With \code{schur_solver = "auto"}, sparse inverse kernels such as \code{Ainv}
+type. With \code{schur_solver = auto}, sparse inverse kernels such as \code{Ainv}
 are solved through CHOLMOD via the Matrix package, while dense kernels such as
 \code{Ginv} are solved through a dense compiled backend. If the dense Schur
-working matrix \code{Cuu^{-1} Z'X} would be very large, \code{"auto"} selects
-\code{"cholmod_lowmem"}, which computes the same Schur complement in blocks.
-The \code{"eigen_sparse"} solver is retained mainly for diagnostics and
+working matrix \code{Cuu^{-1} Z'X} would be very large, \code{auto} selects
+\code{cholmod_lowmem}, which computes the same Schur complement in blocks.
+The \code{eigen_sparse} solver is retained mainly for diagnostics and
 small-scale comparisons.
 }
 \examples{
