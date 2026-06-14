@@ -704,8 +704,13 @@ remains available for validation in small data sets with
 <p>With <code>schur_solver = "auto"</code>, sparse inverse kernels such
 as <code>Ainv</code> are routed through CHOLMOD via the Matrix package,
 whereas dense kernels such as <code>Ginv</code> are routed to a dense
-compiled solver. The <code>"eigen_sparse"</code> option is mainly a
-diagnostic path for small comparisons.</p>
+compiled solver. If the full dense Schur working matrix
+<code>Cuu^{-1} Z'X</code> would be too large, <code>"auto"</code>
+selects <code>"cholmod_lowmem"</code>, which constructs the same
+fixed-effect Schur complement in blocks and solves
+<code>Cuu^{-1} Z'X b</code> on demand during MU block processing. The
+<code>"eigen_sparse"</code> option is mainly a diagnostic path for small
+comparisons.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

@@ -136,7 +136,7 @@
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span>, which <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span></code></pre></div>
-<p>El paquete también soporta <code>relationship = "Ginv"</code>, <code>"Hinv"</code> y <code>"custom"</code>. Para ejemplos desarrollados, ver la <a href="https://alanmaxsp.github.io/connectedness/articles/intro.html" class="external-link">vignette introductoria</a>.</p>
+<p>El paquete también soporta <code>relationship = "Ginv"</code>, <code>"Hinv"</code> y <code>"custom"</code>. Para ejemplos desarrollados, ver la <a href="https://alanmaxsp.github.io/connectedness/intro.html" class="external-link">vignette introductoria</a>.</p>
 </div>
 <div class="section level3">
 <h3 id="selección-temporal-de-animales-target">Selección temporal de animales target<a class="anchor" aria-label="anchor" href="#selecci%C3%B3n-temporal-de-animales-target"></a>
@@ -160,7 +160,7 @@
 <div class="section level3">
 <h3 id="diagnóstico-rápido">Diagnóstico rápido<a class="anchor" aria-label="anchor" href="#diagn%C3%B3stico-r%C3%A1pido"></a>
 </h3>
-<p>Para bases grandes, <code>dry_run = TRUE</code> permite inspeccionar el tamaño esperado del sistema antes de resolver las MME:</p>
+<p>Para bases grandes, <code>dry_run = TRUE</code> permite inspeccionar el tamaño esperado del sistema antes de resolver las MME, incluido si conviene usar el método <code>schur_solver = "cholmod_lowmem"</code> para evitar matrices densas intermedias grandes:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">diag</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
 <span>  data          <span class="op">=</span> <span class="va">my_data</span>,</span>
@@ -192,7 +192,7 @@
 <div class="section level3">
 <h3 id="más-información">Más información<a class="anchor" aria-label="anchor" href="#m%C3%A1s-informaci%C3%B3n"></a>
 </h3>
-<p>La <a href="https://alanmaxsp.github.io/connectedness/articles/intro.html" class="external-link">vignette introductoria</a> es el documento principal para la explicación metodológica, ejemplos con <code>Ginv</code>, <code>Hinv</code> y kernels custom, diagnóstico computacional y referencias.</p>
+<p>La <a href="https://alanmaxsp.github.io/connectedness/intro.html" class="external-link">vignette introductoria</a> es el documento principal para la explicación metodológica, ejemplos con <code>Ginv</code>, <code>Hinv</code> y kernels custom, diagnóstico computacional y referencias.</p>
 </div>
 <div class="section level3">
 <h3 id="funciones-principales">Funciones principales<a class="anchor" aria-label="anchor" href="#funciones-principales"></a>
@@ -259,7 +259,7 @@
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span>, which <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span></code></pre></div>
-<p>The package also supports <code>relationship = "Ginv"</code>, <code>"Hinv"</code>, and <code>"custom"</code>. See the <a href="https://alanmaxsp.github.io/connectedness/articles/intro.html" class="external-link">intro vignette</a> for worked examples.</p>
+<p>The package also supports <code>relationship = "Ginv"</code>, <code>"Hinv"</code>, and <code>"custom"</code>. See the <a href="https://alanmaxsp.github.io/connectedness/intro.html" class="external-link">intro vignette</a> for worked examples.</p>
 </div>
 <div class="section level3">
 <h3 id="temporal-definition-of-target-animals">Temporal definition of target animals<a class="anchor" aria-label="anchor" href="#temporal-definition-of-target-animals"></a>
@@ -283,7 +283,7 @@
 <div class="section level3">
 <h3 id="quick-diagnostics">Quick diagnostics<a class="anchor" aria-label="anchor" href="#quick-diagnostics"></a>
 </h3>
-<p>For large datasets, use <code>dry_run = TRUE</code> to inspect the expected MME system size before solving:</p>
+<p>For large datasets, use <code>dry_run = TRUE</code> to inspect the expected MME system size before solving, including whether <code>schur_solver = "cholmod_lowmem"</code> should be used to avoid large intermediate dense matrices:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">diag</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
 <span>  data          <span class="op">=</span> <span class="va">my_data</span>,</span>
@@ -315,7 +315,7 @@
 <div class="section level3">
 <h3 id="more-information">More information<a class="anchor" aria-label="anchor" href="#more-information"></a>
 </h3>
-<p>The <a href="https://alanmaxsp.github.io/connectedness/articles/intro.html" class="external-link">intro vignette</a> is the main document for methodological background, examples with <code>Ginv</code>, <code>Hinv</code> and custom kernels, computational diagnostics, and references.</p>
+<p>The <a href="https://alanmaxsp.github.io/connectedness/intro.html" class="external-link">intro vignette</a> is the main document for methodological background, examples with <code>Ginv</code>, <code>Hinv</code> and custom kernels, computational diagnostics, and references.</p>
 </div>
 <div class="section level3">
 <h3 id="main-functions">Main functions<a class="anchor" aria-label="anchor" href="#main-functions"></a>

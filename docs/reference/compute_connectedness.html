@@ -98,8 +98,9 @@ complementary metrics for all MU pairs: the Coefficient of Determination
 <span>  dry_run <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max_mme_dim <span class="op">=</span> <span class="fl">500000L</span>,</span>
 <span>  mme_backend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"schur"</span>, <span class="st">"full_mme"</span><span class="op">)</span>,</span>
-<span>  schur_solver <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"cholmod"</span>, <span class="st">"dense"</span>, <span class="st">"eigen_sparse"</span><span class="op">)</span>,</span>
+<span>  schur_solver <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"cholmod"</span>, <span class="st">"cholmod_lowmem"</span>, <span class="st">"dense"</span>, <span class="st">"eigen_sparse"</span><span class="op">)</span>,</span>
 <span>  schur_block_size <span class="op">=</span> <span class="fl">16L</span>,</span>
+<span>  schur_x_block_size <span class="op">=</span> <span class="fl">64L</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -203,16 +204,16 @@ genomic substeps of <code>Hinv</code>, but it is ignored for purely pedigree-bas
 
 
 <dt id="arg-tunedg">tunedG<a class="anchor" aria-label="anchor" href="#arg-tunedg"></a></dt>
-<dd><p>Integer tuning option for <code>G</code>: <code>0</code> = no tuning; <code>1</code> = standardize by matching mean diagonal/off-diagonal contrast within <code>G</code>; <code>2</code> = affine tuning to match <code>A22</code> mean diagonal and off-diagonal; <code>3</code> = shift <code>G</code> by a constant so its global mean matches <code>A22</code>.</p></dd>
+<dd><p>Integer tuning option for <code>G</code>: <code>0</code> = no tuning; <code>1</code> = standardize by matching mean diagonal/off-diagonal contrast within <code>G</code>; <code>2</code> = affine tuning to match \[...]</p></dd>
 
 
 <dt id="arg-tau">tau<a class="anchor" aria-label="anchor" href="#arg-tau"></a></dt>
-<dd><p>Scaling factor multiplying <code>G^{-1}</code> in the construction of
+<dd><p>Scaling factor multiplying \(G^{-1}\) in the construction of
 <code>H^{-1}</code>.</p></dd>
 
 
 <dt id="arg-omega">omega<a class="anchor" aria-label="anchor" href="#arg-omega"></a></dt>
-<dd><p>Scaling factor multiplying <code>A22^{-1}</code> in the construction of
+<dd><p>Scaling factor multiplying \(A22^{-1}\) in the construction of
 <code>H^{-1}</code>.</p></dd>
 
 
@@ -243,10 +244,10 @@ MUs with records in the window are selected.</p></dd>
 
 <dt id="arg-target-scope">target_scope<a class="anchor" aria-label="anchor" href="#arg-target-scope"></a></dt>
 <dd><p>Character string defining which animals from the selected
-MUs receive non-zero weights in the pairwise contrast. <code>"window"</code>
+MUs receive non-zero weights in the pairwise contrast. <code>window</code>
 (default) uses only animals from selected MUs with records inside
 <code>year_window</code> as target animals, while still fitting the MME with all
-records in <code>data</code>. <code>"selected_mus"</code> uses all animals from the selected
+records in <code>data</code>. <code>selected_mus</code> uses all animals from the selected
 MUs as target animals.</p></dd>
 
 
@@ -264,24 +265,32 @@ check. This safety check is applied only when <code>mme_backend = "full_mme"</co
 
 <dt id="arg-mme-backend">mme_backend<a class="anchor" aria-label="anchor" href="#arg-mme-backend"></a></dt>
 <dd><p>Character string indicating the numerical backend used for
-the MME solve. <code>"schur"</code> (the default) factorizes the animal block and
-absorbs fixed effects through a Schur complement. <code>"full_mme"</code> builds and
+the MME solve. <code>schur</code> (the default) factorizes the animal block and
+absorbs fixed effects through a Schur complement. <code>full_mme</code> builds and
 factorizes the full MME system. The two backends are algebraically equivalent
 up to floating-point roundoff.</p></dd>
 
 
 <dt id="arg-schur-solver">schur_solver<a class="anchor" aria-label="anchor" href="#arg-schur-solver"></a></dt>
 <dd><p>Character string indicating the numerical solver used when
-<code>mme_backend = "schur"</code>. Options are <code>"auto"</code>, <code>"cholmod"</code>,
-<code>"dense"</code>, and <code>"eigen_sparse"</code>. <code>"cholmod"</code> uses CHOLMOD through
-the Matrix package for sparse kernels; <code>"dense"</code> uses a dense compiled solver;
-<code>"eigen_sparse"</code> keeps the Eigen sparse solver for diagnostics and small
-comparisons.</p></dd>
+<code>mme_backend = "schur"</code>. Options are <code>auto</code>, <code>cholmod</code>, <code>cholmod_lowmem</code>,
+<code>dense</code>, and <code>eigen_sparse</code>. <code>cholmod</code> uses CHOLMOD through
+the Matrix package for sparse kernels; <code>cholmod_lowmem</code> uses the same
+formulation but avoids materializing the full dense \(Cuu^{-1} Z'X\) matrix;
+<code>dense</code> uses a dense compiled solver; <code>eigen_sparse</code> keeps the Eigen
+sparse solver for diagnostics and small comparisons.</p></dd>
 
 
 <dt id="arg-schur-block-size">schur_block_size<a class="anchor" aria-label="anchor" href="#arg-schur-block-size"></a></dt>
 <dd><p>Positive integer. Number of MU right-hand-side columns
 solved per block in the Schur backend.</p></dd>
+
+
+<dt id="arg-schur-x-block-size">schur_x_block_size<a class="anchor" aria-label="anchor" href="#arg-schur-x-block-size"></a></dt>
+<dd><p>Positive integer. Number of fixed-effect columns
+processed per block when <code>schur_solver = "cholmod_lowmem"</code>. This controls
+memory use during construction of the fixed-effect Schur complement
+\(S = X'X - X'Z Cuu^{-1} Z'X\).</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -290,7 +299,7 @@ solved per block in the Schur backend.</p></dd>
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>An object of class <code>"connectedness"</code>, which is a list with:</p><dl><dt>CD</dt>
+    <p>An object of class <code>connectedness</code>, which is a list with:</p><dl><dt>CD</dt>
 <dd><p>Numeric matrix (U x U). Pairwise CD contrast values between MUs.</p></dd>
 
 <dt>PEVD</dt>
@@ -374,15 +383,18 @@ non-zero weights in the contrast vector. Under <code>target_scope = "window"</co
 animals from a pair of MUs inside the window receive weights <code>1 / n_i</code> and
 <code>-1 / n_j</code>, respectively, whereas all other animals receive weight zero in
 the contrast but may still contribute information through the MME.</p>
-<p>The <code>"full_mme"</code> backend directly factorizes the full MME matrix
-<code>[X'X X'Z; Z'X Z'Z + lambda Kinv]</code>. The <code>"schur"</code> backend avoids this full
-factorization by factorizing <code>Cuu = Z'Z + lambda Kinv} and using the fixed-
-effect Schur complement \code{S = X'X - X'Z Cuu^{-1} Z'X</code>.</p>
+<p>The <code>full_mme</code> backend directly factorizes the full MME matrix
+<code>[X\'X X\'Z; Z\'X Z\'Z + lambda Kinv]</code>. The <code>schur</code> backend avoids this full
+factorization by factorizing \(Cuu = Z'Z + lambda Kinv\) and using the fixed-
+effect Schur complement \(S = X'X - X'Z Cuu^{-1} Z'X\).</p>
 <p>The Schur formulation is algebraically independent of the relationship matrix
-type. With <code>schur_solver = "auto"</code>, sparse inverse kernels such as <code>Ainv</code>
+type. With <code>schur_solver = auto</code>, sparse inverse kernels such as <code>Ainv</code>
 are solved through CHOLMOD via the Matrix package, while dense kernels such as
-<code>Ginv</code> are solved through a dense compiled backend. The <code>"eigen_sparse"</code>
-solver is retained mainly for diagnostics and small-scale comparisons.</p>
+<code>Ginv</code> are solved through a dense compiled backend. If the dense Schur
+working matrix \(Cuu^{-1} Z'X\) would be very large, <code>auto</code> selects
+<code>cholmod_lowmem</code>, which computes the same Schur complement in blocks.
+The <code>eigen_sparse</code> solver is retained mainly for diagnostics and
+small-scale comparisons.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>
