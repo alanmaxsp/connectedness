@@ -36,6 +36,9 @@ during genomic matrix construction and related parallel steps.}
 \item{A22}{Optional dense pedigree-based relationship matrix for the same
 genotyped animals and in the same order as the rows of \code{X}. Required when
 \code{tunedG} is 2 or 3.}
+
+\item{verbose}{Logical; if \code{TRUE}, print progress messages from the compiled
+genomic matrix construction routine.}
 }
 \value{
 A list containing \code{Ginv} and several diagnostics describing SNP

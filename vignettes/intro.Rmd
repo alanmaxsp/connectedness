@@ -19,16 +19,15 @@ equally reliable in all data sets. When management units are weakly linked by
 pedigree or genomic relationships, differences in estimated breeding values
 across units become less precise.
 
-The **connectedness** package addresses that problem. It computes pairwise
-connectedness between MUs from the same ingredients that define the evaluation
-context:
+The **connectedness** package computes pairwise connectedness between MUs from
+the same ingredients that define the evaluation context:
 
 - the relationship structure among animals,
 - the assignment of animals to management units,
 - the fixed-effects design,
 - and the assumed variance components.
 
-The package currently supports connectedness computed from:
+The package supports connectedness computed from:
 
 - **A-inverse** (pedigree-based connectedness),
 - **G-inverse** (genomic connectedness),
@@ -37,22 +36,35 @@ The package currently supports connectedness computed from:
 
 ## Which metrics does the package compute?
 
-The package reports two complementary metrics:
+The package reports two complementary contrast-based metrics:
 
 - **PEVD contrast**: prediction error variance of differences between MU
   contrasts. Lower values indicate stronger connectedness.
 - **CD contrast**: coefficient of determination for the same contrasts. Higher
   values indicate stronger connectedness.
 
-Both metrics are computed under the **contrast approach** through mixed model
-equations. That point is important: the package is not combining unrelated
-metrics, but two connected summaries derived from the same contrast framework.
-This is one of the reasons why the package can also exploit ideas such as
-**temporal overlap** between units when records are restricted to a common time
-window.
+Both metrics are computed through mixed model equations (MME). The package uses
+the relationship kernel and the fixed-effect structure to evaluate the precision
+of pairwise MU contrasts, not a separate heuristic summary.
 
 If desired, `PEVD` can be returned scaled by the additive genetic variance by
 setting `scale_pevd = TRUE` in `compute_connectedness()`.
+
+## What are target animals?
+
+The **target animals** are the animals that receive non-zero weights in the
+pairwise contrast vector. They are not necessarily the only animals used in the
+mixed-model equations. Other animals may contribute information through their
+records and relationships, but receive zero weight in a specific MU contrast.
+
+This distinction is especially important when a time window is used. The MME can
+be built using all records in `data`, while CD/PEVD are reported for contrasts
+among a temporally defined set of target animals.
+
+For a pair of MUs, target animals from one MU receive weights `1 / n_i`, target
+animals from the other MU receive weights `-1 / n_j`, and all other animals
+receive weight zero in that contrast. Those zero-weight animals can still affect
+the solution through relationships and records in the MME.
 
 ## Quick start
 
@@ -79,29 +91,29 @@ plot(res, which = "CD")
 plot(res, which = "PEVD")
 ```
 
-That is the shortest mental model of the package:
+The short workflow is:
 
-1. provide the animals, MUs, and fixed-effect structure,
+1. provide animals, MUs, and fixed effects,
 2. choose the relationship representation,
-3. obtain pairwise CD and PEVD between MUs.
+3. obtain pairwise CD and PEVD between reported MUs.
 
 ## Inputs: what does the function need?
 
 The package separates the problem into two layers.
 
-### 1. Evaluation context
+### Evaluation context
 
-These inputs define *what comparison problem* you want to study:
+These inputs define the comparison problem:
 
-- `data`: records used to define the animals and management units involved,
+- `data`: records used to define animals, MUs, and fixed effects,
 - `animal_col`: animal identifier column,
-- `mu_col`: management unit column,
+- `mu_col`: management-unit column,
 - `fixed_formula`: fixed-effects structure,
 - `sigma2a`, `sigma2e`: variance components.
 
-### 2. Relationship structure
+### Relationship structure
 
-These inputs define *how animals are connected genetically*:
+These inputs define how animals are connected genetically:
 
 - `relationship = "Ainv"` requires a pedigree,
 - `relationship = "Ginv"` requires a genotype matrix `X` and an index linking
@@ -109,26 +121,31 @@ These inputs define *how animals are connected genetically*:
 - `relationship = "Hinv"` requires pedigree + genotypes + `genotyped_idx`,
 - `relationship = "custom"` uses a supplied inverse kernel.
 
-So the workflow is intentionally explicit: the user chooses not only the data,
-but also the **type of connectedness** they want to quantify.
-
 ## Outputs: what do you get back?
 
-`compute_connectedness()` returns an object of class `"connectedness"`.
-The most important components are:
+`compute_connectedness()` returns an object of class `"connectedness"`. The most
+important components are:
 
 - `CD`: matrix of pairwise CD contrast values,
 - `PEVD`: matrix of pairwise PEVD contrast values,
 - `qK`: denominator of the contrast under the chosen kernel,
 - `qC`: prediction error numerator of the contrast,
-- `n_target`: number of target animals per MU,
-- `relationship`: the inverse relationship matrix used,
+- `n_target`: number of target animals per reported MU,
+- `report_mus`: MUs included in the reported CD/PEVD matrices,
+- `target_scope`: definition of the target animals used in the contrasts,
+- `relationship`: inverse relationship matrix type used,
+- `activity_summary`: temporal MU activity summary when a time window and
+  `min_records_per_year` are used,
 - `overlap`: temporal overlap table when a time window is used.
+
+When a time window is used, `n_target` refers to animals receiving non-zero
+weights in the contrast. It does not necessarily include all animals used in the
+MME.
 
 If `scale_pevd = TRUE`, the `PEVD` matrix is returned on the scale
 `PEVD / sigma2a`.
 
-## Example
+## Example: weak vs strong connectedness
 
 The example below contrasts two small pedigree scenarios:
 
@@ -136,8 +153,7 @@ The example below contrasts two small pedigree scenarios:
 - a **more connected** setting, where a sire is shared across MUs.
 
 The goal is not biological realism, but to illustrate how the package responds
-to a simple change in pedigree structure and why `PEVD` and `CD` do not always
-move in the same direction.
+to a simple change in pedigree structure.
 
 ### Scenario 1: weaker connectedness
 
@@ -205,26 +221,13 @@ res_strong$PEVD
 res_strong$qK
 ```
 
-The weak-versus-strong comparison is informative, but the two metrics do not
-need to move in parallel.
+The weak-versus-strong comparison is useful because PEVD and CD are related but
+not identical summaries. A stronger pedigree link can reduce `PEVD`, improving
+precision of the contrast. At the same time, the kernel-based denominator `qK`
+can also change because the MUs become less genetically distinct. CD is
+interpreted relative to that denominator.
 
-In this toy example, the stronger pedigree link (a shared sire across MUs)
-reduces `PEVD`, from 33.33 in the weak scenario to 20 in the strong scenario.
-This reflects a more precisely estimated contrast between the two management
-units.
-
-At the same time, the stronger link also reduces the kernel-based denominator
-of the contrast (`qK`), from 1 in the weak scenario to 0.5 in the strong
-scenario. In other words, the two MUs become more connected, but also less
-genetically distinct. Because `CD` is interpreted relative to that denominator,
-it can decrease even when `PEVD` decreases.
-
-So, in this example, stronger connectedness improves precision of the contrast
-(lower `PEVD`), but also reduces the expected genetic variability underlying
-that contrast (lower `qK`), which leads to a lower `CD`.
-
-
-### Optional PEVD scaling
+## Optional PEVD scaling
 
 ```{r eval=FALSE}
 res_strong_scaled <- compute_connectedness(
@@ -242,17 +245,32 @@ res_strong_scaled <- compute_connectedness(
 res_strong_scaled$PEVD
 ```
 
-## Choosing among Ainv, Ginv, Hinv, and custom
+## Relationship structures
 
 A practical way to think about the four options is:
 
 - use **Ainv** when the target notion of connectedness is pedigree-based,
 - use **Ginv** when realized genomic links are the main object of interest,
-- use **Hinv** when you want the connectedness measure to align with a
-  combined pedigree-genomic evaluation context,
+- use **Hinv** when the connectedness measure should align with a combined
+  pedigree-genomic evaluation context,
 - use **custom** when your inverse kernel is built elsewhere.
 
-### Example: G-inverse
+### A-inverse
+
+```{r eval=FALSE}
+res_A <- compute_connectedness(
+  data          = data_strong,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  relationship  = "Ainv",
+  pedigree      = pedigree_strong
+)
+```
+
+### G-inverse
 
 ```{r eval=FALSE}
 X <- matrix(
@@ -280,7 +298,7 @@ res_G <- compute_connectedness(
 )
 ```
 
-### Example: H-inverse
+### H-inverse
 
 ```{r eval=FALSE}
 renum <- renum_pedigree(pedigree_strong, verbose = FALSE)
@@ -300,18 +318,106 @@ res_H <- compute_connectedness(
 )
 ```
 
-## Temporal overlap: why the contrast framework helps
+### Custom inverse kernels
 
-The package can optionally restrict the analysis to a common time window and
-report where MU pairs actually overlap in time.
+Custom inverse kernels are useful when the relationship inverse is built by
+external software or by a user-defined method. The key requirement is that row
+and column identifiers match the names of `animal_index`.
+
+The example below exports a package-built `Ainv` as triplets, reads it back, and
+uses it through `relationship = "custom"`.
 
 ```{r eval=FALSE}
-data_time <- transform(
-  data_strong,
-  year = c(2020, 2021, 2020, 2021)
+library(Matrix)
+
+renum <- renum_pedigree(pedigree_strong, verbose = FALSE)
+Ainv_res <- build_Ainv(renum)
+Ainv_custom <- Ainv_res$Ainv
+
+animal_index_custom <- stats::setNames(renum$new_id, renum$animal)
+animal_index_custom <- animal_index_custom[!is.na(names(animal_index_custom))]
+
+Ainv_triplet <- summary(Ainv_custom)
+idx_to_id <- names(animal_index_custom)[order(animal_index_custom)]
+
+Ainv_triplet_out <- data.frame(
+  row = idx_to_id[Ainv_triplet$i],
+  col = idx_to_id[Ainv_triplet$j],
+  value = Ainv_triplet$x
 )
 
-res_time <- compute_connectedness(
+write.table(
+  Ainv_triplet_out,
+  file = "Ainv_custom_triplet.txt",
+  row.names = FALSE,
+  col.names = TRUE,
+  quote = FALSE
+)
+
+Ainv_triplet_in <- read.table(
+  "Ainv_custom_triplet.txt",
+  header = TRUE,
+  stringsAsFactors = FALSE
+)
+
+i <- animal_index_custom[Ainv_triplet_in$row]
+j <- animal_index_custom[Ainv_triplet_in$col]
+
+Ainv_custom_in <- Matrix::sparseMatrix(
+  i = i,
+  j = j,
+  x = Ainv_triplet_in$value,
+  dims = c(length(animal_index_custom), length(animal_index_custom))
+)
+
+Ainv_custom_in <- Matrix::forceSymmetric(Ainv_custom_in, uplo = "L")
+Ainv_custom_in <- methods::as(Ainv_custom_in, "dgCMatrix")
+
+res_custom <- compute_connectedness(
+  data          = data_strong,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  relationship  = "custom",
+  rel_matrix    = Ainv_custom_in,
+  animal_index  = animal_index_custom
+)
+
+max(abs(res_A$CD - res_custom$CD), na.rm = TRUE)
+max(abs(res_A$PEVD - res_custom$PEVD), na.rm = TRUE)
+```
+
+If a custom file stores only one triangle of a symmetric sparse matrix, the
+matrix must be symmetrized before calling `compute_connectedness()`.
+
+## Using a time window to define target animals
+
+A time window is used to select MUs of interest and, by default, to define the
+animals that receive non-zero weights in the contrast. The MME itself is still
+built from all records supplied in `data`.
+
+| `target_scope` | MME uses | Target animals | Question answered |
+|---|---|---|---|
+| `"window"` | all records in `data` | animals from selected MUs inside `year_window` | recent connectedness within the full system |
+| `"selected_mus"` | all records in `data` | all animals from selected MUs | accumulated connectedness of active MUs |
+
+```{r eval=FALSE}
+pedigree_time <- data.frame(
+  animal = c("S1", "D1", "D2", "A0", "A1", "A2", "B0", "B1", "B2"),
+  sire   = c("0",  "0",  "0",  "S1", "S1", "S1", "S1", "S1", "S1"),
+  dam    = c("0",  "0",  "0",  "D1", "D1", "D2", "D1", "D1", "D2")
+)
+
+data_time <- data.frame(
+  animal = c("A0", "A1", "A2", "B0", "B1", "B2"),
+  MU     = c("MU1", "MU1", "MU1", "MU2", "MU2", "MU2"),
+  sex    = c("F", "M", "F", "F", "M", "F"),
+  year   = c(2015, 2020, 2021, 2015, 2020, 2021)
+)
+
+res_window <- compute_connectedness(
   data                 = data_time,
   animal_col           = "animal",
   mu_col               = "MU",
@@ -319,18 +425,82 @@ res_time <- compute_connectedness(
   sigma2a              = 50,
   sigma2e              = 100,
   relationship         = "Ainv",
-  pedigree             = pedigree_strong,
+  pedigree             = pedigree_time,
   year_col             = "year",
   year_window          = c(2020, 2021),
-  min_records_per_year = 1
+  min_records_per_year = 1,
+  target_scope         = "window"
 )
 
-plot(res_time, which = "overlap")
+res_selected_mus <- compute_connectedness(
+  data                 = data_time,
+  animal_col           = "animal",
+  mu_col               = "MU",
+  fixed_formula        = ~ 1 + sex,
+  sigma2a              = 50,
+  sigma2e              = 100,
+  relationship         = "Ainv",
+  pedigree             = pedigree_time,
+  year_col             = "year",
+  year_window          = c(2020, 2021),
+  min_records_per_year = 1,
+  target_scope         = "selected_mus"
+)
+
+res_window$n_target
+res_selected_mus$n_target
 ```
 
-This is a useful extension of the contrast logic: connectedness is not only a
-function of pedigree or genomics, but also of **which units are effectively
-represented in the same time horizon**.
+With `target_scope = "window"`, the target animals are `A1`, `A2`, `B1`, and
+`B2`. With `target_scope = "selected_mus"`, the target animals are `A0`, `A1`,
+`A2`, `B0`, `B1`, and `B2`.
+
+## Summarizing connectedness
+
+The output matrices are pairwise. The helpers below summarize those pairwise
+values; they do not create new contrasts against "all other MUs".
+
+### Overall pairwise summaries
+
+```{r eval=FALSE}
+overall_connectedness <- function(res) {
+  up <- upper.tri(res$CD)
+
+  data.frame(
+    n_mus = nrow(res$CD),
+    n_pairs = sum(up),
+    mean_CD = mean(res$CD[up], na.rm = TRUE),
+    median_CD = stats::median(res$CD[up], na.rm = TRUE),
+    mean_PEVD = mean(res$PEVD[up], na.rm = TRUE),
+    median_PEVD = stats::median(res$PEVD[up], na.rm = TRUE)
+  )
+}
+
+overall_connectedness(res_strong)
+```
+
+### MU-level summaries
+
+```{r eval=FALSE}
+mu_connectedness_summary <- function(res) {
+  CD <- res$CD
+  PEVD <- res$PEVD
+
+  diag(CD) <- NA_real_
+  diag(PEVD) <- NA_real_
+
+  data.frame(
+    MU = rownames(CD),
+    mean_CD_to_others = rowMeans(CD, na.rm = TRUE),
+    median_CD_to_others = apply(CD, 1, stats::median, na.rm = TRUE),
+    mean_PEVD_to_others = rowMeans(PEVD, na.rm = TRUE),
+    median_PEVD_to_others = apply(PEVD, 1, stats::median, na.rm = TRUE),
+    n_target = res$n_target[rownames(CD)]
+  )
+}
+
+mu_connectedness_summary(res_strong)
+```
 
 ## Visualization
 
@@ -340,7 +510,58 @@ The package provides a direct plotting method for a first visual inspection.
 plot(res_strong, which = "CD")
 plot(res_strong, which = "PEVD")
 plot(res_strong, which = "all")
+plot(res_window, which = "overlap")
 ```
 
-A quick visual check is often the easiest way to identify MU pairs that are
-well connected, weakly connected, or effectively isolated.
+A quick visual check is often the easiest way to identify MU pairs that are well
+connected, weakly connected, or effectively isolated.
+
+## Computational notes
+
+For large analyses, first inspect the problem size without solving:
+
+```{r eval=FALSE}
+diag <- compute_connectedness(
+  data          = data_strong,
+  animal_col    = "animal",
+  mu_col        = "MU",
+  fixed_formula = ~ 1 + sex,
+  sigma2a       = 50,
+  sigma2e       = 100,
+  relationship  = "Ainv",
+  pedigree      = pedigree_strong,
+  dry_run       = TRUE
+)
+
+diag$mme_dim
+diag$schur_W_storage_mb
+diag$selected_schur_solver
+```
+
+By default, `compute_connectedness()` uses the Schur-complement MME solving
+method (`mme_backend = "schur"`). The previous full-MME method remains available
+for validation in small data sets with `mme_backend = "full_mme"`.
+
+With `schur_solver = "auto"`, sparse inverse kernels such as `Ainv` are routed
+through CHOLMOD via the Matrix package, whereas dense kernels such as `Ginv` are
+routed to a dense compiled solver. If the full dense Schur working matrix
+`Cuu^{-1} Z'X` would be too large, `"auto"` selects `"cholmod_lowmem"`, which
+constructs the same fixed-effect Schur complement in blocks and solves
+`Cuu^{-1} Z'X b` on demand during MU block processing. The `"eigen_sparse"`
+option is mainly a diagnostic path for small comparisons.
+
+## References
+
+Kennedy, B. W., & Trus, D. (1993). Considerations on genetic connectedness
+between management units under an animal model. *Journal of Animal Science*,
+71, 2341–2352.
+
+Laloë, D. (1993). Precision and information in linear models of genetic
+evaluation. *Genetics Selection Evolution*, 25, 557–576.
+
+Laloë, D., Phocas, F., & Ménissier, F. (1996). Considerations on measures of
+precision and connectedness in mixed linear models of genetic evaluation.
+*Genetics Selection Evolution*, 28, 359–378.
+
+Yu, H., & Morota, G. (2021). GCA: An R package for genetic connectedness
+analysis using pedigree and genomic data. *BMC Genomics*, 22, 119.
