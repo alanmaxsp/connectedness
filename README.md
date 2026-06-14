@@ -61,7 +61,7 @@ plot(res, which = "all")
 
 El paquete también soporta `relationship = "Ginv"`, `"Hinv"` y `"custom"`.
 Para ejemplos desarrollados, ver la
-[vignette introductoria](https://alanmaxsp.github.io/connectedness/articles/intro.html).
+[vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html).
 
 ### Selección temporal de animales target
 
@@ -89,7 +89,8 @@ res_time <- compute_connectedness(
 ### Diagnóstico rápido
 
 Para bases grandes, `dry_run = TRUE` permite inspeccionar el tamaño esperado del
-sistema antes de resolver las MME:
+sistema antes de resolver las MME, incluido si conviene usar el método
+`schur_solver = "cholmod_lowmem"` para evitar matrices densas intermedias grandes:
 
 ```r
 diag <- compute_connectedness(
@@ -117,7 +118,7 @@ El objeto `connectedness` incluye, entre otros componentes:
 
 ### Más información
 
-La [vignette introductoria](https://alanmaxsp.github.io/connectedness/articles/intro.html)
+La [vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html)
 es el documento principal para la explicación metodológica, ejemplos con
 `Ginv`, `Hinv` y kernels custom, diagnóstico computacional y referencias.
 
@@ -185,7 +186,7 @@ plot(res, which = "all")
 ```
 
 The package also supports `relationship = "Ginv"`, `"Hinv"`, and `"custom"`.
-See the [intro vignette](https://alanmaxsp.github.io/connectedness/articles/intro.html)
+See the [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html)
 for worked examples.
 
 ### Temporal definition of target animals
@@ -214,7 +215,8 @@ res_time <- compute_connectedness(
 ### Quick diagnostics
 
 For large datasets, use `dry_run = TRUE` to inspect the expected MME system size
-before solving:
+before solving, including whether `schur_solver = "cholmod_lowmem"` should be
+used to avoid large intermediate dense matrices:
 
 ```r
 diag <- compute_connectedness(
@@ -242,7 +244,7 @@ The `connectedness` object includes, among other components:
 
 ### More information
 
-The [intro vignette](https://alanmaxsp.github.io/connectedness/articles/intro.html) is
+The [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html) is
 the main document for methodological background, examples with `Ginv`, `Hinv`
 and custom kernels, computational diagnostics, and references.
 

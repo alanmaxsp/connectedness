@@ -7,9 +7,11 @@
   MME by factorizing `Cuu = Z'Z + lambda Kinv` and absorbing fixed effects
   through a Schur complement.
 - Added `schur_solver` selection for the Schur backend. `"auto"` routes sparse
-  kernels such as `Ainv` through CHOLMOD via Matrix, dense kernels such as
-  `Ginv` through a dense compiled solver, and keeps `"eigen_sparse"` as a
-  diagnostic solver for small comparisons.
+  kernels such as `Ainv` through CHOLMOD via Matrix, switches to
+  `"cholmod_lowmem"` when the dense Schur working matrix `Cuu^{-1} Z'X`
+  would be too large, routes dense kernels such as `Ginv` through a dense
+  compiled solver, and keeps `"eigen_sparse"` as a diagnostic solver for small
+  comparisons.
 - The Schur backend is now the default `compute_connectedness()` backend; the
   full-MME backend remains available with `mme_backend = "full_mme"`.
 - Added `target_scope` to define which animals from temporally selected MUs

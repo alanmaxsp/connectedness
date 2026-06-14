@@ -90,12 +90,18 @@
 #'   equivalent up to floating-point roundoff.
 #' @param schur_solver Character string indicating the numerical solver used
 #'   when `mme_backend = "schur"`. Options are `"auto"`, `"cholmod"`,
-#'   `"dense"`, and `"eigen_sparse"`. `"cholmod"` uses CHOLMOD through the
-#'   Matrix package for sparse kernels; `"dense"` uses a dense compiled solver;
+#'   `"cholmod_lowmem"`, `"dense"`, and `"eigen_sparse"`. `"cholmod"` uses
+#'   CHOLMOD through the Matrix package for sparse kernels; `"cholmod_lowmem"`
+#'   uses the same formulation but avoids materializing the full dense
+#'   `Cuu^{-1} Z'X` matrix; `"dense"` uses a dense compiled solver;
 #'   `"eigen_sparse"` keeps the Eigen sparse solver for diagnostics and small
 #'   comparisons.
 #' @param schur_block_size Positive integer. Number of MU right-hand-side
 #'   columns solved per block in the Schur backend.
+#' @param schur_x_block_size Positive integer. Number of fixed-effect columns
+#'   processed per block when `schur_solver = "cholmod_lowmem"`. This controls
+#'   memory use during construction of the fixed-effect Schur complement
+#'   `S = X'X - X'Z Cuu^{-1} Z'X`.
 #' @param verbose Logical. If `TRUE`, progress messages are printed.
 #'
 #' @return An object of class `"connectedness"`, which is a list with:
@@ -165,8 +171,11 @@
 #' The Schur formulation is algebraically independent of the relationship matrix
 #' type. With `schur_solver = "auto"`, sparse inverse kernels such as `Ainv` are
 #' solved through CHOLMOD via the Matrix package, while dense kernels such as
-#' `Ginv` are solved through a dense compiled backend. The `"eigen_sparse"`
-#' solver is retained mainly for diagnostics and small-scale comparisons.
+#' `Ginv` are solved through a dense compiled backend. If the dense Schur
+#' working matrix `Cuu^{-1} Z'X` would be very large, `"auto"` selects
+#' `"cholmod_lowmem"`, which computes the same Schur complement in blocks.
+#' The `"eigen_sparse"` solver is retained mainly for diagnostics and
+#' small-scale comparisons.
 #'
 #' @seealso [renum_pedigree()], [build_Ainv()], [build_Ginv()], [build_Hinv()],
 #'   [print.connectedness()], [plot.connectedness()]
@@ -243,8 +252,9 @@ compute_connectedness <- function(
     dry_run              = FALSE,
     max_mme_dim          = 500000L,
     mme_backend          = c("schur", "full_mme"),
-    schur_solver         = c("auto", "cholmod", "dense", "eigen_sparse"),
+    schur_solver         = c("auto", "cholmod", "cholmod_lowmem", "dense", "eigen_sparse"),
     schur_block_size     = 16L,
+    schur_x_block_size   = 64L,
     verbose              = TRUE
 ) {
 
@@ -296,6 +306,13 @@ compute_connectedness <- function(
     stop("'schur_block_size' must be a single positive integer.")
   }
   schur_block_size <- as.integer(schur_block_size)
+
+  if ((!is.numeric(schur_x_block_size) && !is.integer(schur_x_block_size)) ||
+      length(schur_x_block_size) != 1L || is.na(schur_x_block_size) ||
+      schur_x_block_size < 1 || schur_x_block_size != as.integer(schur_x_block_size)) {
+    stop("'schur_x_block_size' must be a single positive integer.")
+  }
+  schur_x_block_size <- as.integer(schur_x_block_size)
 
   if (!is.null(year_window)) {
     if (is.null(year_col)) {
@@ -591,8 +608,12 @@ compute_connectedness <- function(
   selected_schur_solver <- .choose_schur_solver(
     rel_matrix = rel_matrix,
     relationship = relationship,
-    schur_solver = schur_solver
+    schur_solver = schur_solver,
+    fixed_matrix = Xsp
   )
+  if (selected_schur_solver == "cholmod_lowmem" && !.is_sparse_matrix(rel_matrix)) {
+    stop("schur_solver = 'cholmod_lowmem' requires a sparse relationship matrix.")
+  }
 
   diagnostics <- .connectedness_diagnostics(
     relationship = relationship,
@@ -614,6 +635,7 @@ compute_connectedness <- function(
     n_records_activity_window = n_records_activity_window,
     n_records_target = nrow(data_target),
     n_mus_used_for_connectedness_records = length(unique(data_analysis[[mu_col]])),
+    schur_x_block_size = schur_x_block_size,
     call = cl
   )
 
@@ -668,6 +690,23 @@ compute_connectedness <- function(
         sigma2e = sigma2e,
         mu_names = as.character(report_mus),
         block_size = schur_block_size,
+        verbose = verbose
+      )
+    } else if (selected_schur_solver == "cholmod_lowmem") {
+      if (!.is_sparse_matrix(rel_matrix)) {
+        stop("schur_solver = 'cholmod_lowmem' requires a sparse relationship matrix.")
+      }
+      res_cpp <- .cd_contrast_mu_schur_cholmod_lowmem_R(
+        Kinv = rel_matrix,
+        id_rec = id_rec,
+        Xsp = Xsp,
+        mu_animal = as.integer(mu_animal),
+        target = target,
+        sigma2a = sigma2a,
+        sigma2e = sigma2e,
+        mu_names = as.character(report_mus),
+        block_size = schur_block_size,
+        x_block_size = schur_x_block_size,
         verbose = verbose
       )
     } else if (selected_schur_solver == "dense") {
@@ -796,16 +835,31 @@ compute_connectedness <- function(
 .choose_schur_solver <- function(rel_matrix,
                                  relationship,
                                  schur_solver = "auto",
+                                 fixed_matrix = NULL,
                                  dense_density_threshold = 0.20,
-                                 min_n_for_dense_switch = 1000L) {
+                                 min_n_for_dense_switch = 1000L,
+                                 lowmem_W_gib_threshold = 8) {
   if (schur_solver != "auto") return(schur_solver)
 
   is_sparse <- .is_sparse_matrix(rel_matrix)
   N <- nrow(rel_matrix)
 
   if (!is_sparse) return("dense")
-  if (relationship == "Ainv") return("cholmod")
   if (relationship == "Ginv") return("dense")
+
+  sparse_solver <- function() {
+    if (is.null(fixed_matrix)) return("cholmod")
+    p <- ncol(fixed_matrix)
+    W_elements <- as.numeric(N) * as.numeric(p)
+    W_gib <- W_elements * 8 / 1024^3
+    if (is.finite(W_elements) &&
+        (W_elements > (2^31 - 1) || W_gib > lowmem_W_gib_threshold)) {
+      return("cholmod_lowmem")
+    }
+    "cholmod"
+  }
+
+  if (relationship == "Ainv") return(sparse_solver())
 
   nnz <- Matrix::nnzero(rel_matrix)
   density <- nnz / (as.numeric(N) * as.numeric(N))
@@ -814,7 +868,7 @@ compute_connectedness <- function(
     if (N >= min_n_for_dense_switch && density > dense_density_threshold) {
       return("dense")
     }
-    return("cholmod")
+    return(sparse_solver())
   }
 
   "dense"
@@ -839,6 +893,7 @@ compute_connectedness <- function(
                                        n_records_activity_window,
                                        n_records_target,
                                        n_mus_used_for_connectedness_records,
+                                       schur_x_block_size,
                                        call) {
 
   rel_n <- nrow(rel_matrix)
@@ -877,10 +932,13 @@ compute_connectedness <- function(
   explicit_mme_storage_mb_lower_bound <-
     explicit_mme_nnz_lower_bound * (8 + 4) / 1024^2
   dense_matrix_gb <- as.numeric(rel_n) * as.numeric(rel_n) * 8 / 1024^3
-  schur_W_storage_mb <- as.numeric(rel_n) * as.numeric(p) * 8 / 1024^2
+  schur_W_elements <- as.numeric(rel_n) * as.numeric(p)
+  schur_W_exceeds_32bit <- schur_W_elements > (2^31 - 1)
+  schur_W_storage_mb <- schur_W_elements * 8 / 1024^2
   schur_S_storage_mb <- as.numeric(p) * as.numeric(p) * 8 / 1024^2
   schur_W_storage_gb <- schur_W_storage_mb / 1024
   schur_S_storage_gb <- schur_S_storage_mb / 1024
+  schur_lowmem_W_block_gib <- as.numeric(rel_n) * as.numeric(min(p, schur_x_block_size)) * 8 / 1024^3
   recommended_backend <- if (is.finite(max_mme_dim) && mme_dim > max_mme_dim) {
     "schur"
   } else {
@@ -914,10 +972,14 @@ compute_connectedness <- function(
       fixed_effect_nonzeros = x_nnz,
       explicit_mme_nonzeros_lower_bound = explicit_mme_nnz_lower_bound,
       explicit_mme_storage_mb_lower_bound = explicit_mme_storage_mb_lower_bound,
+      schur_W_elements = schur_W_elements,
+      schur_W_exceeds_32bit = schur_W_exceeds_32bit,
       schur_W_storage_mb = schur_W_storage_mb,
       schur_S_storage_mb = schur_S_storage_mb,
       schur_W_storage_gb = schur_W_storage_gb,
       schur_S_storage_gb = schur_S_storage_gb,
+      schur_lowmem_X_block_size = schur_x_block_size,
+      schur_lowmem_W_block_gib = schur_lowmem_W_block_gib,
       recommended_backend = recommended_backend,
       requested_backend = mme_backend,
       requested_schur_solver = schur_solver,
@@ -925,7 +987,8 @@ compute_connectedness <- function(
       schur_solver_recommended = .choose_schur_solver(
         rel_matrix = rel_matrix,
         relationship = relationship,
-        schur_solver = "auto"
+        schur_solver = "auto",
+        fixed_matrix = fixed_matrix
       ),
       year_window = year_window,
       scale_pevd = scale_pevd,
@@ -985,8 +1048,12 @@ compute_connectedness <- function(
     "  explicit MME storage lower bound: %.1f MB",
     x$explicit_mme_storage_mb_lower_bound
   ))
+  message(sprintf("  Schur W elements          : %.3g", x$schur_W_elements))
+  message(sprintf("  Schur W exceeds 2^31 - 1 : %s", x$schur_W_exceeds_32bit))
   message(sprintf("  Schur W storage           : %.1f MB (%.2f GB)", x$schur_W_storage_mb, x$schur_W_storage_gb))
   message(sprintf("  Schur S storage           : %.1f MB (%.2f GB)", x$schur_S_storage_mb, x$schur_S_storage_gb))
+  message(sprintf("  low-memory X block size   : %d", x$schur_lowmem_X_block_size))
+  message(sprintf("  low-memory W block size   : %.2f GB", x$schur_lowmem_W_block_gib))
   message(sprintf("  requested backend         : %s", x$requested_backend))
   message(sprintf("  recommended backend       : %s", x$recommended_backend))
   message(sprintf("  requested Schur solver    : %s", x$requested_schur_solver))

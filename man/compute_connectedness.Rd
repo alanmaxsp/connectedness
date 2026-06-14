@@ -33,8 +33,9 @@ compute_connectedness(
   dry_run = FALSE,
   max_mme_dim = 500000L,
   mme_backend = c("schur", "full_mme"),
-  schur_solver = c("auto", "cholmod", "dense", "eigen_sparse"),
+  schur_solver = c("auto", "cholmod", "cholmod_lowmem", "dense", "eigen_sparse"),
   schur_block_size = 16L,
+  schur_x_block_size = 64L,
   verbose = TRUE
 )
 }
@@ -146,14 +147,20 @@ factorizes the full MME system. The two backends are algebraically equivalent
 up to floating-point roundoff.}
 
 \item{schur_solver}{Character string indicating the numerical solver used when
-\code{mme_backend = "schur"}. Options are \code{"auto"}, \code{"cholmod"},
+\code{mme_backend = "schur"}. Options are \code{"auto"}, \code{"cholmod"}, \code{"cholmod_lowmem"},
 \code{"dense"}, and \code{"eigen_sparse"}. \code{"cholmod"} uses CHOLMOD through
-the Matrix package for sparse kernels; \code{"dense"} uses a dense compiled solver;
-\code{"eigen_sparse"} keeps the Eigen sparse solver for diagnostics and small
-comparisons.}
+the Matrix package for sparse kernels; \code{"cholmod_lowmem"} uses the same
+formulation but avoids materializing the full dense \code{Cuu^{-1} Z'X} matrix;
+\code{"dense"} uses a dense compiled solver; \code{"eigen_sparse"} keeps the Eigen
+sparse solver for diagnostics and small comparisons.}
 
 \item{schur_block_size}{Positive integer. Number of MU right-hand-side columns
 solved per block in the Schur backend.}
+
+\item{schur_x_block_size}{Positive integer. Number of fixed-effect columns
+processed per block when \code{schur_solver = "cholmod_lowmem"}. This controls
+memory use during construction of the fixed-effect Schur complement
+\code{S = X'X - X'Z Cuu^{-1} Z'X}.}
 
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
@@ -235,8 +242,11 @@ effect Schur complement \code{S = X'X - X'Z Cuu^{-1} Z'X}.
 The Schur formulation is algebraically independent of the relationship matrix
 type. With \code{schur_solver = "auto"}, sparse inverse kernels such as \code{Ainv}
 are solved through CHOLMOD via the Matrix package, while dense kernels such as
-\code{Ginv} are solved through a dense compiled backend. The \code{"eigen_sparse"}
-solver is retained mainly for diagnostics and small-scale comparisons.
+\code{Ginv} are solved through a dense compiled backend. If the dense Schur
+working matrix \code{Cuu^{-1} Z'X} would be very large, \code{"auto"} selects
+\code{"cholmod_lowmem"}, which computes the same Schur complement in blocks.
+The \code{"eigen_sparse"} solver is retained mainly for diagnostics and
+small-scale comparisons.
 }
 \examples{
 \dontrun{

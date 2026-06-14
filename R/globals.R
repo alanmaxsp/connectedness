@@ -1,8 +1,5 @@
-#' @importFrom utils globalVariables
-NULL
-
 if (getRversion() >= "2.15.1") {
-  globalVariables(c(
+  utils::globalVariables(c(
     "MU1",
     "MU2",
     "Year",
