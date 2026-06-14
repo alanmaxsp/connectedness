@@ -3,4 +3,7 @@ pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   intro: intro.html
-last_built: 2026-06-14T15:21Z
+last_built: 2026-06-14T15:41Z
+urls:
+  reference: https://alanmaxsp.github.io/connectedness/reference
+  article: https://alanmaxsp.github.io/connectedness/articles
