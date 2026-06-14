@@ -100,12 +100,12 @@ of the compiled backend. Currently, this argument affects \code{Ginv} and the
 genomic substeps of \code{Hinv}, but it is ignored for purely pedigree-based
 \code{Ainv} analyses and is not propagated to the final CD/PEVD MME solver.}
 
-\item{tunedG}{Integer tuning option for \code{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \code{G}; \code{2} = affine tuning to match \[...]
+\item{tunedG}{Integer tuning option for \code{G}: \code{0} = no tuning; \code{1} = standardize by matching mean diagonal/off-diagonal contrast within \code{G}; \code{2} = affine tuning to match \[...]}
 
-\item{tau}{Scaling factor multiplying \code{G^{-1}} in the construction of
+\item{tau}{Scaling factor multiplying \eqn{G^{-1}} in the construction of
 \code{H^{-1}}.}
 
-\item{omega}{Scaling factor multiplying \code{A22^{-1}} in the construction of
+\item{omega}{Scaling factor multiplying \eqn{A22^{-1}} in the construction of
 \code{H^{-1}}.}
 
 \item{scale_pevd}{Logical. If \code{TRUE}, the returned \code{PEVD} matrix is divided
@@ -150,7 +150,7 @@ up to floating-point roundoff.}
 \code{mme_backend = "schur"}. Options are \code{auto}, \code{cholmod}, \code{cholmod_lowmem},
 \code{dense}, and \code{eigen_sparse}. \code{cholmod} uses CHOLMOD through
 the Matrix package for sparse kernels; \code{cholmod_lowmem} uses the same
-formulation but avoids materializing the full dense \code{Cuu^{-1} Z'X} matrix;
+formulation but avoids materializing the full dense \eqn{Cuu^{-1} Z'X} matrix;
 \code{dense} uses a dense compiled solver; \code{eigen_sparse} keeps the Eigen
 sparse solver for diagnostics and small comparisons.}
 
@@ -160,7 +160,7 @@ solved per block in the Schur backend.}
 \item{schur_x_block_size}{Positive integer. Number of fixed-effect columns
 processed per block when \code{schur_solver = "cholmod_lowmem"}. This controls
 memory use during construction of the fixed-effect Schur complement
-\code{S = X'X - X'Z Cuu^{-1} Z'X}.}
+\eqn{S = X'X - X'Z Cuu^{-1} Z'X}.}
 
 \item{verbose}{Logical. If \code{TRUE}, progress messages are printed.}
 }
@@ -235,15 +235,15 @@ animals from a pair of MUs inside the window receive weights \code{1 / n_i} and
 the contrast but may still contribute information through the MME.
 
 The \code{full_mme} backend directly factorizes the full MME matrix
-\code{[X'X X'Z; Z'X Z'Z + lambda Kinv]}. The \code{schur} backend avoids this full
-factorization by factorizing \code{Cuu = Z'Z + lambda Kinv} and using the fixed-
-effect Schur complement \code{S = X'X - X'Z Cuu^{-1} Z'X}.
+\code{[X\'X X\'Z; Z\'X Z\'Z + lambda Kinv]}. The \code{schur} backend avoids this full
+factorization by factorizing \eqn{Cuu = Z'Z + lambda Kinv} and using the fixed-
+effect Schur complement \eqn{S = X'X - X'Z Cuu^{-1} Z'X}.
 
 The Schur formulation is algebraically independent of the relationship matrix
 type. With \code{schur_solver = auto}, sparse inverse kernels such as \code{Ainv}
 are solved through CHOLMOD via the Matrix package, while dense kernels such as
 \code{Ginv} are solved through a dense compiled backend. If the dense Schur
-working matrix \code{Cuu^{-1} Z'X} would be very large, \code{auto} selects
+working matrix \eqn{Cuu^{-1} Z'X} would be very large, \code{auto} selects
 \code{cholmod_lowmem}, which computes the same Schur complement in blocks.
 The \code{eigen_sparse} solver is retained mainly for diagnostics and
 small-scale comparisons.
