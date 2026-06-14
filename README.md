@@ -61,7 +61,7 @@ plot(res, which = "all")
 
 El paquete también soporta `relationship = "Ginv"`, `"Hinv"` y `"custom"`.
 Para ejemplos desarrollados, ver la
-[vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html).
+[vignette introductoria](https://alanmaxsp.github.io/connectedness/articles/intro.html).
 
 ### Selección temporal de animales target
 
@@ -118,7 +118,7 @@ El objeto `connectedness` incluye, entre otros componentes:
 
 ### Más información
 
-La [vignette introductoria](https://alanmaxsp.github.io/connectedness/intro.html)
+La [vignette introductoria](https://alanmaxsp.github.io/connectedness/articles/intro.html)
 es el documento principal para la explicación metodológica, ejemplos con
 `Ginv`, `Hinv` y kernels custom, diagnóstico computacional y referencias.
 
@@ -186,7 +186,7 @@ plot(res, which = "all")
 ```
 
 The package also supports `relationship = "Ginv"`, `"Hinv"`, and `"custom"`.
-See the [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html)
+See the [intro vignette](https://alanmaxsp.github.io/connectedness/articles/intro.html)
 for worked examples.
 
 ### Temporal definition of target animals
@@ -244,7 +244,7 @@ The `connectedness` object includes, among other components:
 
 ### More information
 
-The [intro vignette](https://alanmaxsp.github.io/connectedness/intro.html) is
+The [intro vignette](https://alanmaxsp.github.io/connectedness/articles/intro.html) is
 the main document for methodological background, examples with `Ginv`, `Hinv`
 and custom kernels, computational diagnostics, and references.
 
