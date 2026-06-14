@@ -1,0 +1,21 @@
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/LICENSE-text.html</loc></url>
+<url><loc>/LICENSE.html</loc></url>
+<url><loc>/RELEASE.html</loc></url>
+<url><loc>/articles/index.html</loc></url>
+<url><loc>/articles/intro.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/news/index.html</loc></url>
+<url><loc>/reference/build_Ainv.html</loc></url>
+<url><loc>/reference/build_Ginv.html</loc></url>
+<url><loc>/reference/build_Hinv.html</loc></url>
+<url><loc>/reference/compute_connectedness.html</loc></url>
+<url><loc>/reference/connectedness-package.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/plot.connectedness.html</loc></url>
+<url><loc>/reference/print.connectedness.html</loc></url>
+<url><loc>/reference/renum_pedigree.html</loc></url>
+</urlset>
+

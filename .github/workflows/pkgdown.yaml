@@ -1,0 +1,66 @@
+name: pkgdown
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pkgdown:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Setup pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            libxml2-dev \
+            libfontconfig1-dev \
+            libharfbuzz-dev \
+            libfribidi-dev \
+            libfreetype6-dev \
+            libpng-dev \
+            libtiff5-dev \
+            libjpeg-dev \
+            libgit2-dev \
+            libuv1-dev
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::pkgdown
+            any::devtools
+            any::roxygen2
+            any::rmarkdown
+            any::knitr
+            any::remotes
+          needs: website
+
+      - name: Clean old docs folder
+        run: |
+          Rscript -e 'pkgdown::clean_site(force = TRUE)'
+
+      - name: Build pkgdown site
+        run: |
+          Rscript -e 'pkgdown::build_site()'
+
+      - name: Commit updated pkgdown site
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update pkgdown site"
+          file_pattern: docs
