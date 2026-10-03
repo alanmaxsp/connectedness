@@ -1,4 +1,7 @@
-# connectedness development version
+# connectedness 0.1.0
+
+First numbered release, published on 2026-10-03. Includes software citation
+metadata and automatic release archiving through Zenodo.
 
 ## New features
 
@@ -18,8 +21,6 @@
   receive non-zero contrast weights. The MME is built with all available data;
   `target_scope = "window"` targets animals inside `year_window`, while
   `target_scope = "selected_mus"` targets all animals from selected MUs.
-
-# connectedness 0.1.0
 
 ## Features
 

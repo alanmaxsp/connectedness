@@ -1,0 +1,9 @@
+bibentry(
+  bibtype = "Manual",
+  title = "connectedness: An R Package for Genetic Connectedness in Animal Breeding",
+  author = person("Alan", "Pardo", email = "pardo.alan@inta.gob.ar"),
+  year = "2026",
+  note = paste("R package version", meta$Version),
+  url = "https://github.com/alanmaxsp/connectedness",
+  header = "To cite connectedness:"
+)

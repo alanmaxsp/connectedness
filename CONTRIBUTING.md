@@ -41,6 +41,9 @@ Para el trabajo habitual en GitHub Desktop:
    de instalación/cita necesarias dentro del cambio revisado. En **Releases**,
    cree una publicación con etiqueta `vX.Y.Z` sobre el commit validado de `main`.
    No mueva ni reemplace etiquetas anteriores; publique una nueva para corregirlas.
+   Zenodo está conectado para archivar las releases y asignar un DOI por versión.
+   Antes de publicar, actualice versión y fecha en `CITATION.cff` y quite el DOI
+   de la versión anterior; después, documente el DOI nuevo sin mover la etiqueta.
 7. Después de publicar, sincronice `develop` incorporando los cambios de `main`
    sin sobrescribir trabajos pendientes. Durante desarrollo puede usar una versión
    como `X.Y.Z.9000` en `DESCRIPTION`; la versión publicada debe volver a una
@@ -48,8 +51,7 @@ Para el trabajo habitual en GitHub Desktop:
 
 Una release identifica y describe una versión del código; no implica publicación
 en CRAN ni creación automática de un instalador binario de R. Crear `develop`
-tampoco crea una release. Antes de una primera publicación numerada, las
-instalaciones por etiqueta que muestra el README son ejemplos pendientes.
+tampoco crea una release. La primera versión numerada es `v0.1.0`.
 
 Las ramas y etiquetas pertenecen al mismo repositorio. Cuando éste es público,
 desarrollo también lo es. La separación controla qué versión se instala por
@@ -109,6 +111,10 @@ For routine work in GitHub Desktop:
    installation/citation references within the reviewed change. Under
    **Releases**, create a release with tag `vX.Y.Z` on the validated `main` commit.
    Do not move or replace previous tags; publish a new version to fix them.
+   Zenodo is connected to archive releases and assign a DOI to each version.
+   Before publishing, update the version and date in `CITATION.cff` and remove
+   the previous version's DOI; afterwards, document the new DOI without moving
+   the tag.
 7. After release, synchronize `develop` by merging changes from `main` without
    overwriting pending work. During development, a version such as `X.Y.Z.9000`
    may be used in `DESCRIPTION`; the published version must return to an
@@ -116,8 +122,7 @@ For routine work in GitHub Desktop:
 
 A release identifies and describes a code version; it does not imply CRAN
 publication or automatically create an R binary installer. Creating `develop`
-does not create a release either. Until the first numbered release, the README's
-tag installation commands are pending examples.
+does not create a release either. The first numbered version is `v0.1.0`.
 
 Branches and tags belong to the same repository. When it is public, development
 is public too. This separation controls the default installation version; it

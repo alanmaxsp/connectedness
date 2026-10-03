@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "Please cite this software when using connectedness."
+type: software
+title: "connectedness: An R Package for Genetic Connectedness in Animal Breeding"
+abstract: "Contrast-based genetic connectedness between management units using CD and PEVD metrics from linear mixed model equations, with pedigree, genomic, combined pedigree-genomic, or user-supplied relationship kernels."
+version: 0.1.0
+date-released: 2026-10-03
+license: MIT
+repository-code: https://github.com/alanmaxsp/connectedness
+authors:
+  - family-names: Pardo
+    given-names: Alan
+    email: pardo.alan@inta.gob.ar
+    orcid: https://orcid.org/0000-0003-3385-3950
+keywords:
+  - animal breeding
+  - genetic connectedness
+  - genetic evaluation
+  - prediction error variance
+  - R package

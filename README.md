@@ -42,14 +42,13 @@ Para probar la versión de desarrollo, elíjala expresamente:
 remotes::install_github("alanmaxsp/connectedness@develop")
 ```
 
-Para reproducir un análisis con una versión numerada, use su etiqueta. Este
-ejemplo será válido **cuando publiquemos la etiqueta `v0.1.0`**:
+Para reproducir un análisis con la versión **0.1.0**, use su etiqueta:
 
 ```r
 remotes::install_github("alanmaxsp/connectedness@v0.1.0")
 ```
 
-Todavía no hay versiones numeradas publicadas. Una rama puede avanzar; una
+Una rama puede avanzar; una
 etiqueta publicada se conserva sin cambios y las correcciones reciben una nueva
 versión. Registre `packageVersion("connectedness")` y `sessionInfo()`; si usa una rama,
 registre además el commit instalado (`packageDescription("connectedness")$RemoteSha`).
@@ -200,14 +199,13 @@ To try the development version, select it explicitly:
 remotes::install_github("alanmaxsp/connectedness@develop")
 ```
 
-To reproduce an analysis with a numbered version, use its tag. This example will
-work **once we publish the `v0.1.0` tag**:
+To reproduce an analysis with version **0.1.0**, use its tag:
 
 ```r
 remotes::install_github("alanmaxsp/connectedness@v0.1.0")
 ```
 
-No numbered versions have been published yet. A branch may advance; a published
+A branch may advance; a published
 tag is retained unchanged and fixes receive a new version. Record
 `packageVersion("connectedness")` and `sessionInfo()`; when using a branch, also record the
 installed commit (`packageDescription("connectedness")$RemoteSha`).
