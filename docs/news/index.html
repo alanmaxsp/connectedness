@@ -59,6 +59,14 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.0" id="connectedness-010">connectedness 0.1.0<a class="anchor" aria-label="anchor" href="#connectedness-010"></a></h2>
+<p>First numbered release, published on 2026-10-03. Includes software citation metadata and automatic release archiving through Zenodo.</p>
+<div class="section level3">
+<h3 id="new-features-0-1-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-0"></a></h3>
+<ul><li>Added an alternative Schur-complement backend for <code><a href="../reference/compute_connectedness.html">compute_connectedness()</a></code> via <code>mme_backend = "schur"</code>. The backend avoids direct factorization of the full MME by factorizing <code>Cuu = Z'Z + lambda Kinv</code> and absorbing fixed effects through a Schur complement.</li>
+<li>Added <code>schur_solver</code> selection for the Schur backend. <code>"auto"</code> routes sparse kernels such as <code>Ainv</code> through CHOLMOD via Matrix, switches to <code>"cholmod_lowmem"</code> when the dense Schur working matrix <code>Cuu^{-1} Z'X</code> would be too large, routes dense kernels such as <code>Ginv</code> through a dense compiled solver, and keeps <code>"eigen_sparse"</code> as a diagnostic solver for small comparisons.</li>
+<li>The Schur backend is now the default <code><a href="../reference/compute_connectedness.html">compute_connectedness()</a></code> backend; the full-MME backend remains available with <code>mme_backend = "full_mme"</code>.</li>
+<li>Added <code>target_scope</code> to define which animals from temporally selected MUs receive non-zero contrast weights. The MME is built with all available data; <code>target_scope = "window"</code> targets animals inside <code>year_window</code>, while <code>target_scope = "selected_mus"</code> targets all animals from selected MUs.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="features-0-1-0">Features<a class="anchor" aria-label="anchor" href="#features-0-1-0"></a></h3>
 <ul><li>Added core user workflows for pedigree, genomic, and H-kernel connectedness: <code><a href="../reference/build_Ainv.html">build_Ainv()</a></code>, <code><a href="../reference/build_Ginv.html">build_Ginv()</a></code>, <code><a href="../reference/build_Hinv.html">build_Hinv()</a></code>, and <code><a href="../reference/compute_connectedness.html">compute_connectedness()</a></code>.</li>

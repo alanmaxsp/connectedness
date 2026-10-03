@@ -112,10 +112,10 @@
 <p>Para probar la versión de desarrollo, elíjala expresamente:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@develop"</span><span class="op">)</span></span></code></pre></div>
-<p>Para reproducir un análisis con una versión numerada, use su etiqueta. Este ejemplo será válido <strong>cuando publiquemos la etiqueta <code>v0.1.0</code></strong>:</p>
+<p>Para reproducir un análisis con la versión <strong>0.1.0</strong>, use su etiqueta:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@v0.1.0"</span><span class="op">)</span></span></code></pre></div>
-<p>Todavía no hay versiones numeradas publicadas. Una rama puede avanzar; una etiqueta publicada se conserva sin cambios y las correcciones reciben una nueva versión. Registre <code>packageVersion("connectedness")</code> y <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>; si usa una rama, registre además el commit instalado (<code>packageDescription("connectedness")$RemoteSha</code>).</p>
+<p>Una rama puede avanzar; una etiqueta publicada se conserva sin cambios y las correcciones reciben una nueva versión. Registre <code>packageVersion("connectedness")</code> y <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>; si usa una rama, registre además el commit instalado (<code>packageDescription("connectedness")$RemoteSha</code>).</p>
 <p>En un repositorio público, <code>develop</code> también es visible y descargable, pero sólo se instala si el usuario la selecciona. Instalar estable y desarrollo en la misma biblioteca de R reemplaza la instalación anterior; use bibliotecas separadas si necesita conservar ambas simultáneamente.</p>
 <p>La <a href="CONTRIBUTING.html#espanol">guía de trabajo</a> explica cómo cambiar de rama en GitHub Desktop y revisar cambios antes de incorporarlos a <code>main</code>.</p>
 </div>
@@ -249,10 +249,10 @@
 <p>To try the development version, select it explicitly:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@develop"</span><span class="op">)</span></span></code></pre></div>
-<p>To reproduce an analysis with a numbered version, use its tag. This example will work <strong>once we publish the <code>v0.1.0</code> tag</strong>:</p>
+<p>To reproduce an analysis with version <strong>0.1.0</strong>, use its tag:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@v0.1.0"</span><span class="op">)</span></span></code></pre></div>
-<p>No numbered versions have been published yet. A branch may advance; a published tag is retained unchanged and fixes receive a new version. Record <code>packageVersion("connectedness")</code> and <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>; when using a branch, also record the installed commit (<code>packageDescription("connectedness")$RemoteSha</code>).</p>
+<p>A branch may advance; a published tag is retained unchanged and fixes receive a new version. Record <code>packageVersion("connectedness")</code> and <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>; when using a branch, also record the installed commit (<code>packageDescription("connectedness")$RemoteSha</code>).</p>
 <p>In a public repository, <code>develop</code> is also visible and downloadable, but is only installed when users select it. Installing stable and development in the same R library replaces the previous installation; use separate libraries if you need both simultaneously.</p>
 <p>The <a href="CONTRIBUTING.html#english">working guide</a> explains switching branches in GitHub Desktop and reviewing changes before merging them into <code>main</code>.</p>
 </div>
