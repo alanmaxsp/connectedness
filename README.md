@@ -30,6 +30,38 @@ Se requiere una herramienta de compilación C++ funcional:
 * **macOS**: herramientas de línea de comandos de Xcode
 * **Linux**: toolchain estándar de compilación
 
+### Versión estable, desarrollo y versiones numeradas
+
+La instalación anterior usa `main`, la rama reservada para cambios revisados.
+`develop` es la rama para cambios y pruebas de la próxima versión. Sus cambios
+no modifican `main` hasta que se revisan y se incorporan explícitamente.
+
+Para probar la versión de desarrollo, elíjala expresamente:
+
+```r
+remotes::install_github("alanmaxsp/connectedness@develop")
+```
+
+Para reproducir un análisis con una versión numerada, use su etiqueta. Este
+ejemplo será válido **cuando publiquemos la etiqueta `v0.1.0`**:
+
+```r
+remotes::install_github("alanmaxsp/connectedness@v0.1.0")
+```
+
+Todavía no hay versiones numeradas publicadas. Una rama puede avanzar; una
+etiqueta publicada se conserva sin cambios y las correcciones reciben una nueva
+versión. Registre `packageVersion("connectedness")` y `sessionInfo()`; si usa una rama,
+registre además el commit instalado (`packageDescription("connectedness")$RemoteSha`).
+
+En un repositorio público, `develop` también es visible y descargable, pero sólo
+se instala si el usuario la selecciona. Instalar estable y desarrollo en la misma
+biblioteca de R reemplaza la instalación anterior; use bibliotecas separadas si
+necesita conservar ambas simultáneamente.
+
+La [guía de trabajo](CONTRIBUTING.md#espanol) explica cómo cambiar de rama en GitHub Desktop
+y revisar cambios antes de incorporarlos a `main`.
+
 ### ¿Qué calcula?
 
 `compute_connectedness()` devuelve dos métricas entre pares de MUs:
@@ -155,6 +187,38 @@ A working C++ toolchain is required:
 * **Windows**: Rtools
 * **macOS**: Xcode command line tools
 * **Linux**: standard compiler toolchain
+
+### Stable, development and numbered versions
+
+The installation above uses `main`, the branch reserved for reviewed changes.
+`develop` is the branch for changes and tests for the next version. Its changes
+do not modify `main` until they are reviewed and explicitly merged.
+
+To try the development version, select it explicitly:
+
+```r
+remotes::install_github("alanmaxsp/connectedness@develop")
+```
+
+To reproduce an analysis with a numbered version, use its tag. This example will
+work **once we publish the `v0.1.0` tag**:
+
+```r
+remotes::install_github("alanmaxsp/connectedness@v0.1.0")
+```
+
+No numbered versions have been published yet. A branch may advance; a published
+tag is retained unchanged and fixes receive a new version. Record
+`packageVersion("connectedness")` and `sessionInfo()`; when using a branch, also record the
+installed commit (`packageDescription("connectedness")$RemoteSha`).
+
+In a public repository, `develop` is also visible and downloadable, but is only
+installed when users select it. Installing stable and development in the same R
+library replaces the previous installation; use separate libraries if you need
+both simultaneously.
+
+The [working guide](CONTRIBUTING.md#english) explains switching branches in GitHub Desktop
+and reviewing changes before merging them into `main`.
 
 ### What does it compute?
 

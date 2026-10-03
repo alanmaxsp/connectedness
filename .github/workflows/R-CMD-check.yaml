@@ -1,10 +1,10 @@
 name: R-CMD-check
 
-on:
+"on":
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 jobs:
@@ -66,4 +66,4 @@ jobs:
 
       - name: Run R CMD check
         run: |
-          Rscript -e 'rcmdcheck::rcmdcheck(args = c("--no-manual"), error_on = "never")'
+          Rscript -e 'rcmdcheck::rcmdcheck(args = c("--no-manual"), error_on = "error")'
