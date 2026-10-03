@@ -106,6 +106,20 @@
 </ul>
 </div>
 <div class="section level3">
+<h3 id="versión-estable-desarrollo-y-versiones-numeradas">Versión estable, desarrollo y versiones numeradas<a class="anchor" aria-label="anchor" href="#versi%C3%B3n-estable-desarrollo-y-versiones-numeradas"></a>
+</h3>
+<p>La instalación anterior usa <code>main</code>, la rama reservada para cambios revisados. <code>develop</code> es la rama para cambios y pruebas de la próxima versión. Sus cambios no modifican <code>main</code> hasta que se revisan y se incorporan explícitamente.</p>
+<p>Para probar la versión de desarrollo, elíjala expresamente:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@develop"</span><span class="op">)</span></span></code></pre></div>
+<p>Para reproducir un análisis con una versión numerada, use su etiqueta. Este ejemplo será válido <strong>cuando publiquemos la etiqueta <code>v0.1.0</code></strong>:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@v0.1.0"</span><span class="op">)</span></span></code></pre></div>
+<p>Todavía no hay versiones numeradas publicadas. Una rama puede avanzar; una etiqueta publicada se conserva sin cambios y las correcciones reciben una nueva versión. Registre <code>packageVersion("connectedness")</code> y <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>; si usa una rama, registre además el commit instalado (<code>packageDescription("connectedness")$RemoteSha</code>).</p>
+<p>En un repositorio público, <code>develop</code> también es visible y descargable, pero sólo se instala si el usuario la selecciona. Instalar estable y desarrollo en la misma biblioteca de R reemplaza la instalación anterior; use bibliotecas separadas si necesita conservar ambas simultáneamente.</p>
+<p>La <a href="CONTRIBUTING.html#espanol">guía de trabajo</a> explica cómo cambiar de rama en GitHub Desktop y revisar cambios antes de incorporarlos a <code>main</code>.</p>
+</div>
+<div class="section level3">
 <h3 id="qué-calcula">¿Qué calcula?<a class="anchor" aria-label="anchor" href="#qu%C3%A9-calcula"></a>
 </h3>
 <p><code><a href="reference/compute_connectedness.html">compute_connectedness()</a></code> devuelve dos métricas entre pares de MUs:</p>
@@ -120,7 +134,7 @@
 <div class="section level3">
 <h3 id="ejemplo-mínimo-con-pedigree-ainv">Ejemplo mínimo con pedigree (Ainv)<a class="anchor" aria-label="anchor" href="#ejemplo-m%C3%ADnimo-con-pedigree-ainv"></a>
 </h3>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/alanmaxsp/connectedness" class="external-link">connectedness</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
@@ -142,7 +156,7 @@
 <h3 id="selección-temporal-de-animales-target">Selección temporal de animales target<a class="anchor" aria-label="anchor" href="#selecci%C3%B3n-temporal-de-animales-target"></a>
 </h3>
 <p>Una ventana temporal puede usarse para seleccionar MUs activas y definir los animales target de los contrastes. Por defecto (<code>target_scope = "window"</code>), el MME se ajusta usando todos los registros disponibles en <code>data</code>, pero CD/PEVD se reportan para animales de MUs activas dentro de la ventana.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_time</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
 <span>  data                 <span class="op">=</span> <span class="va">my_data</span>,</span>
 <span>  animal_col           <span class="op">=</span> <span class="st">"animal_id"</span>,</span>
@@ -161,7 +175,7 @@
 <h3 id="diagnóstico-rápido">Diagnóstico rápido<a class="anchor" aria-label="anchor" href="#diagn%C3%B3stico-r%C3%A1pido"></a>
 </h3>
 <p>Para bases grandes, <code>dry_run = TRUE</code> permite inspeccionar el tamaño esperado del sistema antes de resolver las MME, incluido si conviene usar el método <code>schur_solver = "cholmod_lowmem"</code> para evitar matrices densas intermedias grandes:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">diag</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
 <span>  data          <span class="op">=</span> <span class="va">my_data</span>,</span>
 <span>  animal_col    <span class="op">=</span> <span class="st">"animal_id"</span>,</span>
@@ -215,7 +229,7 @@
 <div class="section level3">
 <h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h3>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness"</span><span class="op">)</span></span></code></pre></div>
 <p>A working C++ toolchain is required:</p>
@@ -227,6 +241,20 @@
 <li>
 <strong>Linux</strong>: standard compiler toolchain</li>
 </ul>
+</div>
+<div class="section level3">
+<h3 id="stable-development-and-numbered-versions">Stable, development and numbered versions<a class="anchor" aria-label="anchor" href="#stable-development-and-numbered-versions"></a>
+</h3>
+<p>The installation above uses <code>main</code>, the branch reserved for reviewed changes. <code>develop</code> is the branch for changes and tests for the next version. Its changes do not modify <code>main</code> until they are reviewed and explicitly merged.</p>
+<p>To try the development version, select it explicitly:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@develop"</span><span class="op">)</span></span></code></pre></div>
+<p>To reproduce an analysis with a numbered version, use its tag. This example will work <strong>once we publish the <code>v0.1.0</code> tag</strong>:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"alanmaxsp/connectedness@v0.1.0"</span><span class="op">)</span></span></code></pre></div>
+<p>No numbered versions have been published yet. A branch may advance; a published tag is retained unchanged and fixes receive a new version. Record <code>packageVersion("connectedness")</code> and <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>; when using a branch, also record the installed commit (<code>packageDescription("connectedness")$RemoteSha</code>).</p>
+<p>In a public repository, <code>develop</code> is also visible and downloadable, but is only installed when users select it. Installing stable and development in the same R library replaces the previous installation; use separate libraries if you need both simultaneously.</p>
+<p>The <a href="CONTRIBUTING.html#english">working guide</a> explains switching branches in GitHub Desktop and reviewing changes before merging them into <code>main</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="what-does-it-compute">What does it compute?<a class="anchor" aria-label="anchor" href="#what-does-it-compute"></a>
@@ -243,7 +271,7 @@
 <div class="section level3">
 <h3 id="minimal-pedigree-example-ainv">Minimal pedigree example (Ainv)<a class="anchor" aria-label="anchor" href="#minimal-pedigree-example-ainv"></a>
 </h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/alanmaxsp/connectedness" class="external-link">connectedness</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
@@ -265,7 +293,7 @@
 <h3 id="temporal-definition-of-target-animals">Temporal definition of target animals<a class="anchor" aria-label="anchor" href="#temporal-definition-of-target-animals"></a>
 </h3>
 <p>A time window can be used to select active MUs and define the target animals for the contrasts. By default (<code>target_scope = "window"</code>), the MME is fitted using all records in <code>data</code>, but CD/PEVD are reported for animals from active MUs inside the time window.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_time</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
 <span>  data                 <span class="op">=</span> <span class="va">my_data</span>,</span>
 <span>  animal_col           <span class="op">=</span> <span class="st">"animal_id"</span>,</span>
@@ -284,7 +312,7 @@
 <h3 id="quick-diagnostics">Quick diagnostics<a class="anchor" aria-label="anchor" href="#quick-diagnostics"></a>
 </h3>
 <p>For large datasets, use <code>dry_run = TRUE</code> to inspect the expected MME system size before solving, including whether <code>schur_solver = "cholmod_lowmem"</code> should be used to avoid large intermediate dense matrices:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">diag</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/compute_connectedness.html">compute_connectedness</a></span><span class="op">(</span></span>
 <span>  data          <span class="op">=</span> <span class="va">my_data</span>,</span>
 <span>  animal_col    <span class="op">=</span> <span class="st">"animal_id"</span>,</span>
@@ -349,6 +377,12 @@
 </ul>
 </div>
 
+<div class="community">
+<h2 data-toc-skip>Community</h2>
+<ul class="list-unstyled">
+<li><a href="CONTRIBUTING.html">Contributing guide</a></li>
+</ul>
+</div>
 
 <div class="citation">
 <h2 data-toc-skip>Citation</h2>
@@ -377,7 +411,7 @@
 
 <div class="pkgdown">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
       </footer>

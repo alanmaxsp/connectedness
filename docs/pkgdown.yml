@@ -1,9 +1,9 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   intro: intro.html
-last_built: 2026-06-14T15:41Z
+last_built: 2026-10-03T17:50Z
 urls:
   reference: https://alanmaxsp.github.io/connectedness/reference
   article: https://alanmaxsp.github.io/connectedness/articles
