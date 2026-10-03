@@ -5,6 +5,7 @@ title: "connectedness: An R Package for Genetic Connectedness in Animal Breeding
 abstract: "Contrast-based genetic connectedness between management units using CD and PEVD metrics from linear mixed model equations, with pedigree, genomic, combined pedigree-genomic, or user-supplied relationship kernels."
 version: 0.1.0
 date-released: 2026-10-03
+doi: 10.5281/zenodo.23126892
 license: MIT
 repository-code: https://github.com/alanmaxsp/connectedness
 authors:

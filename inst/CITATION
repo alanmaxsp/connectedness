@@ -3,6 +3,7 @@ bibentry(
   title = "connectedness: An R Package for Genetic Connectedness in Animal Breeding",
   author = person("Alan", "Pardo", email = "pardo.alan@inta.gob.ar"),
   year = "2026",
+  doi = if (identical(meta$Version, "0.1.0")) "10.5281/zenodo.23126892" else NULL,
   note = paste("R package version", meta$Version),
   url = "https://github.com/alanmaxsp/connectedness",
   header = "To cite connectedness:"

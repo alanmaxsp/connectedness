@@ -1,5 +1,7 @@
 # connectedness
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23126892.svg)](https://doi.org/10.5281/zenodo.23126892)
+
 <p align="center">
   <a href="#espanol">Español</a> · <a href="#english">English</a>
 </p>
@@ -152,6 +154,21 @@ El objeto `connectedness` incluye, entre otros componentes:
 La [vignette introductoria](https://alanmaxsp.github.io/connectedness/articles/intro.html)
 es el documento principal para la explicación metodológica, ejemplos con
 `Ginv`, `Hinv` y kernels custom, diagnóstico computacional y referencias.
+
+### Cómo citar
+
+Para citar la versión **0.1.0**, use:
+
+> Pardo, A. (2026). *connectedness: An R Package for Genetic Connectedness in Animal Breeding*
+> (v0.1.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.23126892
+
+El DOI de [todas las versiones](https://doi.org/10.5281/zenodo.23126891) identifica
+el paquete y remite a la versión más reciente. Para reproducibilidad, cite el DOI
+de la versión utilizada. Zenodo archiva automáticamente cada nueva release de GitHub.
+
+`citation("connectedness")` devuelve la cita del paquete. El DOI de 0.1.0 se asignó
+después de crear la etiqueta: si instala esa etiqueta, complemente la cita de R
+con el DOI indicado arriba. La etiqueta y los archivos archivados se conservan sin cambios.
 
 ### Funciones principales
 
@@ -309,6 +326,21 @@ The `connectedness` object includes, among other components:
 The [intro vignette](https://alanmaxsp.github.io/connectedness/articles/intro.html) is
 the main document for methodological background, examples with `Ginv`, `Hinv`
 and custom kernels, computational diagnostics, and references.
+
+### Citation
+
+To cite version **0.1.0**, use:
+
+> Pardo, A. (2026). *connectedness: An R Package for Genetic Connectedness in Animal Breeding*
+> (v0.1.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.23126892
+
+The [all-versions DOI](https://doi.org/10.5281/zenodo.23126891) identifies the package
+and resolves to the latest version. For reproducibility, cite the DOI of the version
+used. Zenodo automatically archives each new GitHub release.
+
+`citation("connectedness")` returns the software citation. The 0.1.0 DOI was assigned
+after creating the tag: when installing that tag, supplement the R citation with
+the DOI above. The tag and archived files are retained unchanged.
 
 ### Main functions
 
